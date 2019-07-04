@@ -5,6 +5,7 @@ package order;
 service Order {
 
   rpc CreateOrder(WorkRequest) returns (OrderInfo) {}
+  rpc CommitValidation(ValidationResult) returns () {}
 
 }
 
@@ -18,4 +19,8 @@ message OrderInfo {
   string ip = 1;
   string database_markle_root = 2;
   string script_markle_root = 3;
+}
+
+message ValidationResult{
+  string database_markle_root = 1;
 }
