@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package worker;
+
+service Worker {
+
+  rpc OrderWork(Order) returns (OrderResult) {}
+  rpc OrderValidation(ValidatableCode) returns () {}
+
+}
+
+
+message Order {
+  string bridgeid = 1;
+  int32 a = 2;
+  int32 b = 3;
+}
+
+message OrderResult {
+  string workerid = 1;
+  int32 result = 2;
+}
+
+message ValidatableCode {
+  int32 data = 1;
+  int32 arg = 2;
+}

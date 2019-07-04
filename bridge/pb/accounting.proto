@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package accounting;
+
+service Accounting {
+
+  rpc SignupWorkerAccount(SignupWorkerRequest) returns (WorkerAccount) {}
+
+}
+
+
+message SignupWorkeRequest {
+  string userid = 1;
+  string ipAddr = 2;
+}
+
+message WorkerAccount {
+  string userid = 1;
+}

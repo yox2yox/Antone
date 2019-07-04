@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package order;
+
+service Order {
+
+  rpc CreateOrder(WorkRequest) returns (OrderInfo) {}
+
+}
+
+
+message WorkRequest {
+  string userid = 1;
+  int32 add = 2;
+}
+
+message OrderInfo {
+  string ip = 1;
+  string database_markle_root = 2;
+  string script_markle_root = 3;
+}
