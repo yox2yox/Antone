@@ -16,7 +16,7 @@ message WorkRequest {
 }
 
 message OrderInfo {
-  string ip = 1;
+  string addr = 1;
   string database_markle_root = 2;
   string script_markle_root = 3;
 }
