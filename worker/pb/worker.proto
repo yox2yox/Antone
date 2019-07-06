@@ -1,19 +1,19 @@
 syntax = "proto3";
 
-package worker;
+package pb;
 
 service Worker {
 
   rpc OrderWork(Order) returns (OrderResult) {}
-  rpc OrderValidation(ValidatableCode) returns () {}
+  rpc OrderValidation(ValidatableCode) returns (ValidationResult) {}
 
 }
 
 
 message Order {
   string bridgeid = 1;
-  int32 a = 2;
-  int32 b = 3;
+  string userid = 2;
+  int32 add = 3;
 }
 
 message OrderResult {
@@ -24,4 +24,8 @@ message OrderResult {
 message ValidatableCode {
   int32 data = 1;
   int32 arg = 2;
+}
+
+message ValidationResult {
+
 }
