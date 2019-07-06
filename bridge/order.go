@@ -23,11 +23,11 @@ func NewEndpoint() *Endpoint {
 	return &Endpoint{
 		workers: []Worker{
 			Worker{
-				ip:         "localhost",
+				addr:       "localhost",
 				reputation: 0,
 			},
 		},
-		pickNum: 3,
+		pickNum: 1,
 		holder: map[string][]int{
 			"0": []int{
 				0,
@@ -37,7 +37,7 @@ func NewEndpoint() *Endpoint {
 }
 
 func (e *Endpoint) CreateOrder(ctx context.Context, workRequest *pb.WorkRequest) (*pb.OrderInfo, error) {
-	if len(e.workers) <= e.pickNum {
+	if len(e.workers) < e.pickNum {
 		return nil, errors.New("There is not enough Wokers")
 	}
 	rand.Seed(time.Now().UnixNano())
@@ -56,4 +56,8 @@ func (e *Endpoint) CreateOrder(ctx context.Context, workRequest *pb.WorkRequest)
 		DatabaseMarkleRoot: "",
 		ScriptMarkleRoot:   "",
 	}, nil
+}
+
+func (e *Endpoint) CommitValidation(ctx context.Context, validationResult *pb.ValidationResult) (*pb.CommitResult, error) {
+	return &pb.CommitResult{}, nil
 }
