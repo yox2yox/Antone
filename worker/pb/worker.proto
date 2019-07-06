@@ -11,19 +11,19 @@ service Worker {
 
 
 message Order {
-  string bridgeid = 1;
-  string userid = 2;
-  int32 add = 3;
+  string bridgeid = 1; //オーダー元のBridgeID
+  string userid = 2; //オーダー元のclientID
+  int32 add = 3; //加算する値
 }
 
 message OrderResult {
-  string workerid = 1;
-  int32 result = 2;
+  string workerid = 1; //オーダーを請け負ったWorkerのID
+  int32 result = 2; //仕事結果
 }
 
 message ValidatableCode {
-  int32 data = 1;
-  int32 arg = 2;
+  int32 data = 1; //データベースの元データ
+  int32 add = 2; //加算する値
 }
 
 message ValidationResult {

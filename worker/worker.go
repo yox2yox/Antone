@@ -21,14 +21,15 @@ func NewEndpoint() *Endpoint {
 
 func (e *Endpoint) OrderWork(ctx context.Context, order *pb.Order) (*pb.OrderResult, error) {
 	userid := order.Userid
-	_, exist := e.db[userid]
+	data, exist := e.db[userid]
 	if !exist {
 		return nil, errors.New("user's data is not exsist")
 	}
-	e.db[userid] += order.Add
-	return &pb.OrderResult{Workerid: e.id, Result: e.db[userid]}, nil
+	return &pb.OrderResult{Workerid: e.id, Result: data + order.Add}, nil
 }
 
 func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.ValidatableCode) (*pb.ValidationResult, error) {
+	result := validatableCode.Data + validatableCode.Add
+	//Commit Validation
 	return &pb.ValidationResult{}, nil
 }
