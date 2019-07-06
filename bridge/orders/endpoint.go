@@ -1,4 +1,4 @@
-package order
+package orders
 
 import (
 	"context"
@@ -59,5 +59,6 @@ func (e *Endpoint) CreateOrder(ctx context.Context, workRequest *pb.WorkRequest)
 }
 
 func (e *Endpoint) CommitValidation(ctx context.Context, validationResult *pb.ValidationResult) (*pb.CommitResult, error) {
+
 	return &pb.CommitResult{}, nil
 }

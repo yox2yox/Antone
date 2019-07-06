@@ -1,4 +1,4 @@
-package order
+package orders
 
 import (
 	"context"
@@ -43,7 +43,7 @@ func UpServer() (*grpc.Server, net.Listener, error) {
 func TestCreateOrderSuccess(t *testing.T) {
 	grpcServer, listen, err := UpServer()
 	go func() {
-		pb.RegisterOrderServer(grpcServer, NewEndpoint())
+		pb.RegisterOrdersServer(grpcServer, NewEndpoint())
 		grpcServer.Serve(listen)
 		if err != nil {
 			t.Fatalf("failed test %#v", err)
@@ -56,7 +56,7 @@ func TestCreateOrderSuccess(t *testing.T) {
 	}
 	t.Log("Complete to up server")
 	defer conn.Close()
-	client := pb.NewOrderClient(conn)
+	client := pb.NewOrdersClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	orderInfo, err := client.CreateOrder(ctx, &pb.WorkRequest{Userid: "0", Add: 10})

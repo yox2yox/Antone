@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package pb;
 
-service Order {
+service Orders {
 
   rpc CreateOrder(WorkRequest) returns (OrderInfo) {}
   rpc CommitValidation(ValidationResult) returns (CommitResult) {}
