@@ -26,7 +26,7 @@ func UpServer() (*grpc.Server, net.Listener, error) {
 	return grpcServer, lis, nil
 }
 
-func TestOrderWorkSuccess(t *testing.T) {
+func TestGetValidatableCodeSuccess(t *testing.T) {
 	grpcServer, listen, err := UpServer()
 	go func() {
 		pb.RegisterWorkerServer(grpcServer, NewEndpoint())
