@@ -22,7 +22,7 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-type WorkRequest struct {
+type ValidatableCodeRequest struct {
 	Userid               string   `protobuf:"bytes,1,opt,name=userid,proto3" json:"userid,omitempty"`
 	Add                  int32    `protobuf:"varint,2,opt,name=add,proto3" json:"add,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -30,102 +30,94 @@ type WorkRequest struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *WorkRequest) Reset()         { *m = WorkRequest{} }
-func (m *WorkRequest) String() string { return proto.CompactTextString(m) }
-func (*WorkRequest) ProtoMessage()    {}
-func (*WorkRequest) Descriptor() ([]byte, []int) {
+func (m *ValidatableCodeRequest) Reset()         { *m = ValidatableCodeRequest{} }
+func (m *ValidatableCodeRequest) String() string { return proto.CompactTextString(m) }
+func (*ValidatableCodeRequest) ProtoMessage()    {}
+func (*ValidatableCodeRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e0f5d4cf0fc9e41b, []int{0}
 }
 
-func (m *WorkRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_WorkRequest.Unmarshal(m, b)
+func (m *ValidatableCodeRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ValidatableCodeRequest.Unmarshal(m, b)
 }
-func (m *WorkRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_WorkRequest.Marshal(b, m, deterministic)
+func (m *ValidatableCodeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ValidatableCodeRequest.Marshal(b, m, deterministic)
 }
-func (m *WorkRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_WorkRequest.Merge(m, src)
+func (m *ValidatableCodeRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ValidatableCodeRequest.Merge(m, src)
 }
-func (m *WorkRequest) XXX_Size() int {
-	return xxx_messageInfo_WorkRequest.Size(m)
+func (m *ValidatableCodeRequest) XXX_Size() int {
+	return xxx_messageInfo_ValidatableCodeRequest.Size(m)
 }
-func (m *WorkRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_WorkRequest.DiscardUnknown(m)
+func (m *ValidatableCodeRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ValidatableCodeRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_WorkRequest proto.InternalMessageInfo
+var xxx_messageInfo_ValidatableCodeRequest proto.InternalMessageInfo
 
-func (m *WorkRequest) GetUserid() string {
+func (m *ValidatableCodeRequest) GetUserid() string {
 	if m != nil {
 		return m.Userid
 	}
 	return ""
 }
 
-func (m *WorkRequest) GetAdd() int32 {
+func (m *ValidatableCodeRequest) GetAdd() int32 {
 	if m != nil {
 		return m.Add
 	}
 	return 0
 }
 
-type OrderInfo struct {
-	Addr                 string   `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
-	DatabaseMarkleRoot   string   `protobuf:"bytes,2,opt,name=database_markle_root,json=databaseMarkleRoot,proto3" json:"database_markle_root,omitempty"`
-	ScriptMarkleRoot     string   `protobuf:"bytes,3,opt,name=script_markle_root,json=scriptMarkleRoot,proto3" json:"script_markle_root,omitempty"`
+type ValidatableCode struct {
+	Data                 int32    `protobuf:"varint,1,opt,name=data,proto3" json:"data,omitempty"`
+	Add                  int32    `protobuf:"varint,2,opt,name=add,proto3" json:"add,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *OrderInfo) Reset()         { *m = OrderInfo{} }
-func (m *OrderInfo) String() string { return proto.CompactTextString(m) }
-func (*OrderInfo) ProtoMessage()    {}
-func (*OrderInfo) Descriptor() ([]byte, []int) {
+func (m *ValidatableCode) Reset()         { *m = ValidatableCode{} }
+func (m *ValidatableCode) String() string { return proto.CompactTextString(m) }
+func (*ValidatableCode) ProtoMessage()    {}
+func (*ValidatableCode) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e0f5d4cf0fc9e41b, []int{1}
 }
 
-func (m *OrderInfo) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_OrderInfo.Unmarshal(m, b)
+func (m *ValidatableCode) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ValidatableCode.Unmarshal(m, b)
 }
-func (m *OrderInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_OrderInfo.Marshal(b, m, deterministic)
+func (m *ValidatableCode) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ValidatableCode.Marshal(b, m, deterministic)
 }
-func (m *OrderInfo) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OrderInfo.Merge(m, src)
+func (m *ValidatableCode) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ValidatableCode.Merge(m, src)
 }
-func (m *OrderInfo) XXX_Size() int {
-	return xxx_messageInfo_OrderInfo.Size(m)
+func (m *ValidatableCode) XXX_Size() int {
+	return xxx_messageInfo_ValidatableCode.Size(m)
 }
-func (m *OrderInfo) XXX_DiscardUnknown() {
-	xxx_messageInfo_OrderInfo.DiscardUnknown(m)
+func (m *ValidatableCode) XXX_DiscardUnknown() {
+	xxx_messageInfo_ValidatableCode.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_OrderInfo proto.InternalMessageInfo
+var xxx_messageInfo_ValidatableCode proto.InternalMessageInfo
 
-func (m *OrderInfo) GetAddr() string {
+func (m *ValidatableCode) GetData() int32 {
 	if m != nil {
-		return m.Addr
+		return m.Data
 	}
-	return ""
+	return 0
 }
 
-func (m *OrderInfo) GetDatabaseMarkleRoot() string {
+func (m *ValidatableCode) GetAdd() int32 {
 	if m != nil {
-		return m.DatabaseMarkleRoot
+		return m.Add
 	}
-	return ""
-}
-
-func (m *OrderInfo) GetScriptMarkleRoot() string {
-	if m != nil {
-		return m.ScriptMarkleRoot
-	}
-	return ""
+	return 0
 }
 
 type ValidationResult struct {
-	DatabaseMarkleRoot   string   `protobuf:"bytes,1,opt,name=database_markle_root,json=databaseMarkleRoot,proto3" json:"database_markle_root,omitempty"`
+	AddedData            string   `protobuf:"bytes,1,opt,name=added_data,json=addedData,proto3" json:"added_data,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -156,9 +148,9 @@ func (m *ValidationResult) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ValidationResult proto.InternalMessageInfo
 
-func (m *ValidationResult) GetDatabaseMarkleRoot() string {
+func (m *ValidationResult) GetAddedData() string {
 	if m != nil {
-		return m.DatabaseMarkleRoot
+		return m.AddedData
 	}
 	return ""
 }
@@ -195,8 +187,8 @@ func (m *CommitResult) XXX_DiscardUnknown() {
 var xxx_messageInfo_CommitResult proto.InternalMessageInfo
 
 func init() {
-	proto.RegisterType((*WorkRequest)(nil), "pb.WorkRequest")
-	proto.RegisterType((*OrderInfo)(nil), "pb.OrderInfo")
+	proto.RegisterType((*ValidatableCodeRequest)(nil), "pb.ValidatableCodeRequest")
+	proto.RegisterType((*ValidatableCode)(nil), "pb.ValidatableCode")
 	proto.RegisterType((*ValidationResult)(nil), "pb.ValidationResult")
 	proto.RegisterType((*CommitResult)(nil), "pb.CommitResult")
 }
@@ -204,24 +196,22 @@ func init() {
 func init() { proto.RegisterFile("orders.proto", fileDescriptor_e0f5d4cf0fc9e41b) }
 
 var fileDescriptor_e0f5d4cf0fc9e41b = []byte{
-	// 265 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x51, 0x31, 0x4f, 0xf3, 0x30,
-	0x10, 0x6d, 0xda, 0xef, 0x8b, 0x94, 0x6b, 0x81, 0xe8, 0x54, 0xa1, 0xaa, 0x53, 0xe5, 0xa9, 0x03,
-	0x0a, 0x08, 0x06, 0x16, 0xb6, 0xb2, 0x30, 0x20, 0x24, 0x0f, 0x30, 0x56, 0x0e, 0x36, 0x52, 0xd4,
-	0xa4, 0x17, 0xce, 0x17, 0x31, 0xf2, 0xd7, 0x91, 0x9d, 0x42, 0x0b, 0x52, 0xb7, 0xbb, 0x7b, 0xcf,
-	0xef, 0x9d, 0xdf, 0xc1, 0x84, 0xd8, 0x3a, 0xf6, 0x45, 0xcb, 0x24, 0x84, 0xc3, 0xb6, 0x54, 0xb7,
-	0x30, 0x7e, 0x21, 0xde, 0x68, 0xf7, 0xde, 0x39, 0x2f, 0x78, 0x0e, 0x69, 0xe7, 0x1d, 0x57, 0x76,
-	0x96, 0x2c, 0x92, 0x65, 0xa6, 0x77, 0x1d, 0xe6, 0x30, 0x32, 0xd6, 0xce, 0x86, 0x8b, 0x64, 0xf9,
-	0x5f, 0x87, 0x52, 0x7d, 0x42, 0xf6, 0x14, 0xc4, 0x1e, 0xb6, 0x6f, 0x84, 0x08, 0xff, 0x8c, 0xb5,
-	0xbc, 0x7b, 0x14, 0x6b, 0xbc, 0x82, 0xa9, 0x35, 0x62, 0x4a, 0xe3, 0xdd, 0xba, 0x31, 0xbc, 0xa9,
-	0xdd, 0x9a, 0x89, 0x24, 0x6a, 0x64, 0x1a, 0xbf, 0xb1, 0xc7, 0x08, 0x69, 0x22, 0xc1, 0x0b, 0x40,
-	0xff, 0xca, 0x55, 0x2b, 0xbf, 0xf8, 0xa3, 0xc8, 0xcf, 0x7b, 0x64, 0xcf, 0x56, 0xf7, 0x90, 0x3f,
-	0x9b, 0xba, 0xb2, 0x46, 0x2a, 0xda, 0x6a, 0xe7, 0xbb, 0x5a, 0x8e, 0x7a, 0x26, 0xc7, 0x3c, 0xd5,
-	0x29, 0x4c, 0x56, 0xd4, 0x34, 0x95, 0xf4, 0x0a, 0xd7, 0x1f, 0x90, 0xc6, 0x6f, 0x79, 0xbc, 0x84,
-	0xf1, 0x8a, 0x9d, 0x11, 0x17, 0x7b, 0x3c, 0x2b, 0xda, 0xb2, 0x38, 0x88, 0x6a, 0x7e, 0x12, 0x06,
-	0x3f, 0x11, 0xa8, 0x01, 0xde, 0x41, 0xde, 0x4b, 0xed, 0xd7, 0xc2, 0x69, 0x20, 0xfd, 0x5d, 0x73,
-	0x9e, 0x87, 0xe9, 0xa1, 0xad, 0x1a, 0x94, 0x69, 0xbc, 0xc9, 0xcd, 0x57, 0x00, 0x00, 0x00, 0xff,
-	0xff, 0x13, 0x9c, 0x1b, 0xa9, 0xa3, 0x01, 0x00, 0x00,
+	// 228 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x90, 0xb1, 0x6a, 0xc3, 0x30,
+	0x10, 0x86, 0xa3, 0xb4, 0x31, 0xf8, 0x08, 0xad, 0xb8, 0x16, 0x13, 0x0c, 0x85, 0xa0, 0x29, 0x93,
+	0xa1, 0xed, 0xd0, 0xa5, 0x53, 0xd3, 0xad, 0x43, 0x41, 0x43, 0xd7, 0x22, 0x71, 0x37, 0x08, 0x9c,
+	0xca, 0x95, 0xe4, 0x27, 0xe9, 0x0b, 0x17, 0x2b, 0x26, 0x09, 0xc6, 0xdb, 0xdd, 0xe9, 0x3e, 0xe9,
+	0xfb, 0x05, 0x6b, 0x1f, 0x88, 0x43, 0x6c, 0xba, 0xe0, 0x93, 0xc7, 0x65, 0x67, 0xd5, 0x1b, 0x54,
+	0x5f, 0xa6, 0x75, 0x64, 0x92, 0xb1, 0x2d, 0xef, 0x3d, 0xb1, 0xe6, 0xdf, 0x9e, 0x63, 0xc2, 0x0a,
+	0x8a, 0x3e, 0x72, 0x70, 0xb4, 0x11, 0x5b, 0xb1, 0x2b, 0xf5, 0xd8, 0xa1, 0x84, 0x2b, 0x43, 0xb4,
+	0x59, 0x6e, 0xc5, 0x6e, 0xa5, 0x87, 0x52, 0xbd, 0xc0, 0xed, 0xe4, 0x0e, 0x44, 0xb8, 0x1e, 0xda,
+	0x8c, 0xae, 0x74, 0xae, 0x67, 0xc0, 0x47, 0x90, 0x23, 0xe8, 0xfc, 0x8f, 0xe6, 0xd8, 0xb7, 0x09,
+	0x1f, 0x00, 0x0c, 0x11, 0xd3, 0xf7, 0x89, 0x2f, 0x75, 0x99, 0x27, 0xef, 0x26, 0x19, 0x75, 0x03,
+	0xeb, 0xbd, 0x3f, 0x1c, 0x5c, 0x3a, 0xae, 0x3f, 0xfd, 0x09, 0x28, 0x3e, 0x73, 0x28, 0xfc, 0x80,
+	0x6a, 0x74, 0x9f, 0xda, 0xd4, 0x4d, 0x67, 0x9b, 0xf9, 0x98, 0xf5, 0xdd, 0xcc, 0x99, 0x5a, 0xe0,
+	0x2b, 0xc8, 0xe3, 0x3b, 0x67, 0x41, 0xbc, 0xbf, 0x58, 0x3d, 0x09, 0xd7, 0x72, 0x98, 0x5e, 0x3a,
+	0xa9, 0x85, 0x2d, 0xf2, 0x07, 0x3f, 0xff, 0x07, 0x00, 0x00, 0xff, 0xff, 0x44, 0xa1, 0xe5, 0x49,
+	0x70, 0x01, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -236,7 +226,7 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type OrdersClient interface {
-	CreateOrder(ctx context.Context, in *WorkRequest, opts ...grpc.CallOption) (*OrderInfo, error)
+	RequestValidatableCode(ctx context.Context, in *ValidatableCodeRequest, opts ...grpc.CallOption) (*ValidatableCode, error)
 	CommitValidation(ctx context.Context, in *ValidationResult, opts ...grpc.CallOption) (*CommitResult, error)
 }
 
@@ -248,9 +238,9 @@ func NewOrdersClient(cc *grpc.ClientConn) OrdersClient {
 	return &ordersClient{cc}
 }
 
-func (c *ordersClient) CreateOrder(ctx context.Context, in *WorkRequest, opts ...grpc.CallOption) (*OrderInfo, error) {
-	out := new(OrderInfo)
-	err := c.cc.Invoke(ctx, "/pb.Orders/CreateOrder", in, out, opts...)
+func (c *ordersClient) RequestValidatableCode(ctx context.Context, in *ValidatableCodeRequest, opts ...grpc.CallOption) (*ValidatableCode, error) {
+	out := new(ValidatableCode)
+	err := c.cc.Invoke(ctx, "/pb.Orders/RequestValidatableCode", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +258,7 @@ func (c *ordersClient) CommitValidation(ctx context.Context, in *ValidationResul
 
 // OrdersServer is the server API for Orders service.
 type OrdersServer interface {
-	CreateOrder(context.Context, *WorkRequest) (*OrderInfo, error)
+	RequestValidatableCode(context.Context, *ValidatableCodeRequest) (*ValidatableCode, error)
 	CommitValidation(context.Context, *ValidationResult) (*CommitResult, error)
 }
 
@@ -276,20 +266,20 @@ func RegisterOrdersServer(s *grpc.Server, srv OrdersServer) {
 	s.RegisterService(&_Orders_serviceDesc, srv)
 }
 
-func _Orders_CreateOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(WorkRequest)
+func _Orders_RequestValidatableCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidatableCodeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(OrdersServer).CreateOrder(ctx, in)
+		return srv.(OrdersServer).RequestValidatableCode(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.Orders/CreateOrder",
+		FullMethod: "/pb.Orders/RequestValidatableCode",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrdersServer).CreateOrder(ctx, req.(*WorkRequest))
+		return srv.(OrdersServer).RequestValidatableCode(ctx, req.(*ValidatableCodeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -317,8 +307,8 @@ var _Orders_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*OrdersServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CreateOrder",
-			Handler:    _Orders_CreateOrder_Handler,
+			MethodName: "RequestValidatableCode",
+			Handler:    _Orders_RequestValidatableCode_Handler,
 		},
 		{
 			MethodName: "CommitValidation",

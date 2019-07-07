@@ -4,25 +4,24 @@ package pb;
 
 service Orders {
 
-  rpc CreateOrder(WorkRequest) returns (OrderInfo) {}
+  rpc RequestValidatableCode(ValidatableCodeRequest) returns (ValidatableCode) {}
   rpc CommitValidation(ValidationResult) returns (CommitResult) {}
 
 }
 
 
-message WorkRequest {
+message ValidatableCodeRequest {
   string userid = 1;
   int32 add = 2;
 }
 
-message OrderInfo {
-  string addr = 1;
-  string database_markle_root = 2;
-  string script_markle_root = 3;
+message ValidatableCode {
+  int32 data = 1; //データベースの元データ
+  int32 add = 2; //加算する値
 }
 
 message ValidationResult{
-  string database_markle_root = 1;
+  string added_data = 1; //加算後の値
 }
 
 message CommitResult{

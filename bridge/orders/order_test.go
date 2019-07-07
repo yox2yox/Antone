@@ -59,7 +59,7 @@ func TestCreateOrderSuccess(t *testing.T) {
 	client := pb.NewOrdersClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	orderInfo, err := client.CreateOrder(ctx, &pb.WorkRequest{Userid: "0", Add: 10})
+	orderInfo, err := client.RequestValidatableCode(ctx, &pb.ValidatableCodeRequest{Userid: "0", Add: 10})
 	t.Logf("%#v aaa", orderInfo)
 	if err != nil {
 		t.Fatalf("failed test %#v", err)

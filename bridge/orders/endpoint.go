@@ -36,14 +36,13 @@ func NewEndpoint() *Endpoint {
 	}
 }
 
-func (e *Endpoint) CreateOrder(ctx context.Context, workRequest *pb.WorkRequest) (*pb.OrderInfo, error) {
+func (e *Endpoint) RequestValidatableCode(ctx context.Context, vCodeRequest *pb.ValidatableCodeRequest) (*pb.ValidatableCode, error) {
 	if len(e.workers) < e.pickNum {
 		return nil, errors.New("There is not enough Wokers")
 	}
 	rand.Seed(time.Now().UnixNano())
 
-	holderid := e.holder[workRequest.Userid][0]
-
+	_ = e.holder[vCodeRequest.Userid][0]
 	picked := []Worker{}
 	for i := 0; i < e.pickNum; i++ {
 		picked = append(picked, e.workers[rand.Intn(len(e.workers))])
@@ -51,11 +50,11 @@ func (e *Endpoint) CreateOrder(ctx context.Context, workRequest *pb.WorkRequest)
 
 	//Send OrderRequest
 
-	return &pb.OrderInfo{
-		Addr:               e.workers[holderid].addr,
-		DatabaseMarkleRoot: "",
-		ScriptMarkleRoot:   "",
+	return &pb.ValidatableCode{
+		Data: 3,
+		Add:  vCodeRequest.Add,
 	}, nil
+
 }
 
 func (e *Endpoint) CommitValidation(ctx context.Context, validationResult *pb.ValidationResult) (*pb.CommitResult, error) {
