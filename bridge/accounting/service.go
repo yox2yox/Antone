@@ -21,7 +21,7 @@ func NewService() *Service {
 	return &Service{
 		Workers: map[string]Worker{
 			"worker0": Worker{
-				Addr:       "localhost",
+				Addr:       "127.0.0.1:10000",
 				Id:         "woker0",
 				Reputation: 0,
 			},
