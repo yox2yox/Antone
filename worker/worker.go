@@ -7,21 +7,21 @@ import (
 )
 
 type Endpoint struct {
-	db map[string]int32
-	id string
+	Db map[string]int32
+	Id string
 }
 
 func NewEndpoint() *Endpoint {
 	return &Endpoint{
-		db: map[string]int32{
-			"0": 0,
+		Db: map[string]int32{
+			"client0": 0,
 		},
 	}
 }
 
 func (e *Endpoint) GetValidatableCode(ctx context.Context, vCodeRequest *pb.ValidatableCodeRequest) (*pb.ValidatableCode, error) {
 	userid := vCodeRequest.Userid
-	data, exist := e.db[userid]
+	data, exist := e.Db[userid]
 	if !exist {
 		return nil, errors.New("user's data is not exsist")
 	}
@@ -29,7 +29,15 @@ func (e *Endpoint) GetValidatableCode(ctx context.Context, vCodeRequest *pb.Vali
 }
 
 func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.ValidatableCode) (*pb.ValidationResult, error) {
-	_ = validatableCode.Data + validatableCode.Add
-	//Commit Validation
-	return &pb.ValidationResult{}, nil
+	Db := validatableCode.Data + validatableCode.Add
+	return &pb.ValidationResult{Db: Db, Reject: false}, nil
+}
+
+func (e *Endpoint) UpdateDatabase(ctx context.Context, databaseUpdate *pb.DatabaseUpdate) (*pb.UpdateResult, error) {
+	_, exist := e.Db[databaseUpdate.Userid]
+	if !exist {
+		return nil, errors.New("user's data is not exsist")
+	}
+	e.Db[databaseUpdate.Userid] = databaseUpdate.Db
+	return &pb.UpdateResult{}, nil
 }

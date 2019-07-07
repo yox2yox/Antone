@@ -6,6 +6,7 @@ service Worker {
 
   rpc OrderValidation(ValidatableCode) returns (ValidationResult) {}
   rpc GetValidatableCode(ValidatableCodeRequest) returns (ValidatableCode) {}
+  rpc UpdateDatabase(DatabaseUpdate) returns (UpdateResult) {}
 
 }
 
@@ -24,3 +25,10 @@ message ValidationResult {
   int32 db = 1; //データベースの最新データ
   bool reject = 2; //検証失敗
 }
+
+message DatabaseUpdate {
+  string userid = 1;
+  int32 db = 2; //更新後のデータベースデータ
+}
+
+message UpdateResult {}
