@@ -6,30 +6,30 @@ import (
 )
 
 type Worker struct {
-	addr       string
-	id         string
-	reputation int
+	Addr       string
+	Id         string
+	Reputation int
 }
 
 type Service struct {
-	workers   map[string]Worker
-	workersId []string
-	holders   map[string][]string
+	Workers   map[string]Worker
+	WorkersId []string
+	Holders   map[string][]string
 }
 
 func NewService() *Service {
 	return &Service{
-		workers: map[string]Worker{
+		Workers: map[string]Worker{
 			"worker0": Worker{
-				addr:       "localhost",
-				id:         "woker0",
-				reputation: 0,
+				Addr:       "localhost",
+				Id:         "woker0",
+				Reputation: 0,
 			},
 		},
-		workersId: []string{
+		WorkersId: []string{
 			"worker0",
 		},
-		holders: map[string][]string{
+		Holders: map[string][]string{
 			"client0": []string{
 				"worker0",
 			},
@@ -38,7 +38,7 @@ func NewService() *Service {
 }
 
 func (s *Service) GetWorkersCount() int {
-	return len(s.workers)
+	return len(s.Workers)
 }
 
 func (s *Service) GetValidationWorkers(num int) []Worker {
@@ -46,8 +46,8 @@ func (s *Service) GetValidationWorkers(num int) []Worker {
 
 	picked := []Worker{}
 	for i := 0; i < num; i++ {
-		pickedId := s.workersId[rand.Intn(len(s.workers))]
-		picked = append(picked, s.workers[pickedId])
+		pickedId := s.WorkersId[rand.Intn(len(s.Workers))]
+		picked = append(picked, s.Workers[pickedId])
 	}
 
 	return picked
@@ -55,6 +55,6 @@ func (s *Service) GetValidationWorkers(num int) []Worker {
 
 func (s *Service) GetDBHolder(userId string) Worker {
 	rand.Seed(time.Now().UnixNano())
-	holderid := s.holders[userId][rand.Intn(len(s.holders))]
-	return s.workers[holderid]
+	holderid := s.Holders[userId][rand.Intn(len(s.Holders))]
+	return s.Workers[holderid]
 }
