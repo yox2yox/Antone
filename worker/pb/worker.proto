@@ -21,5 +21,6 @@ message ValidatableCode {
 }
 
 message ValidationResult {
-
+  int32 db = 1; //データベースの最新データ
+  bool reject = 2; //検証失敗
 }
