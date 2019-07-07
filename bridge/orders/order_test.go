@@ -69,3 +69,12 @@ func TestCreateOrderSuccess(t *testing.T) {
 		t.Fatalf("failed test orderinfo is nil")
 	}
 }
+
+func TestValidateCodeSuccess(t *testing.T) {
+	accounting := accounting.NewService()
+	orderService := NewService(accounting, true)
+	orderService.ValidateCode("holder0", &pb.ValidatableCode{Data: 10, Add: 0})
+	if len(orderService.GetOrders()[0].OrderResults) <= 0 {
+		t.Fatalf("failed test cannot validate order")
+	}
+}
