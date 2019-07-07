@@ -6,6 +6,7 @@ import (
 	"net"
 	"testing"
 	"time"
+	"yox2yox/antone/bridge/accounting"
 	pb "yox2yox/antone/bridge/pb"
 
 	"google.golang.org/grpc"
@@ -43,7 +44,7 @@ func UpServer() (*grpc.Server, net.Listener, error) {
 func TestCreateOrderSuccess(t *testing.T) {
 	grpcServer, listen, err := UpServer()
 	go func() {
-		pb.RegisterOrdersServer(grpcServer, NewEndpoint())
+		pb.RegisterOrdersServer(grpcServer, NewEndpoint(accounting.NewService()))
 		grpcServer.Serve(listen)
 		if err != nil {
 			t.Fatalf("failed test %#v", err)
