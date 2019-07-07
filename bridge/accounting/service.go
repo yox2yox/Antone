@@ -1,6 +1,7 @@
 package accounting
 
 import (
+	"errors"
 	"math/rand"
 	"time"
 )
@@ -41,16 +42,19 @@ func (s *Service) GetWorkersCount() int {
 	return len(s.Workers)
 }
 
-func (s *Service) GetValidationWorkers(num int) []Worker {
-	rand.Seed(time.Now().UnixNano())
+func (s *Service) GetValidationWorkers(num int) ([]Worker, error) {
+	if len(s.Workers) < num {
+		return nil, errors.New("There is not enough workers")
+	}
 
+	rand.Seed(time.Now().UnixNano())
 	picked := []Worker{}
 	for i := 0; i < num; i++ {
 		pickedId := s.WorkersId[rand.Intn(len(s.Workers))]
 		picked = append(picked, s.Workers[pickedId])
 	}
 
-	return picked
+	return picked, nil
 }
 
 func (s *Service) GetDBHolder(userId string) Worker {
