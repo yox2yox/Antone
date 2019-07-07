@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/rand"
 	"time"
+	"yox2yox/antone/bridge/accounting"
 	pb "yox2yox/antone/bridge/pb"
 )
 
@@ -14,39 +15,22 @@ type Worker struct {
 }
 
 type Endpoint struct {
-	workers []Worker
-	pickNum int
-	holder  map[string][]int
+	accounting *accounting.Service
+	pickNum    int
 }
 
-func NewEndpoint() *Endpoint {
+func NewEndpoint(accounting *accounting.Service) *Endpoint {
 	return &Endpoint{
-		workers: []Worker{
-			Worker{
-				addr:       "localhost",
-				reputation: 0,
-			},
-		},
-		pickNum: 1,
-		holder: map[string][]int{
-			"0": []int{
-				0,
-			},
-		},
+		accounting: accounting,
+		pickNum:    1,
 	}
 }
 
 func (e *Endpoint) RequestValidatableCode(ctx context.Context, vCodeRequest *pb.ValidatableCodeRequest) (*pb.ValidatableCode, error) {
-	if len(e.workers) < e.pickNum {
+	if e.accounting.GetWorkersCount() < e.pickNum {
 		return nil, errors.New("There is not enough Wokers")
 	}
 	rand.Seed(time.Now().UnixNano())
-
-	_ = e.holder[vCodeRequest.Userid][0]
-	picked := []Worker{}
-	for i := 0; i < e.pickNum; i++ {
-		picked = append(picked, e.workers[rand.Intn(len(e.workers))])
-	}
 
 	//Send OrderRequest
 
