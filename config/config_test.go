@@ -5,15 +5,15 @@ import (
 )
 
 func TestReadConfigSuccess(t *testing.T) {
-	config, err := ReadConfig()
+	bridgeConfig, err := ReadBridgeConfig()
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
 	}
-	if config.Server.Addr == "" {
+	if bridgeConfig.Server.Addr == "" {
 		t.Fatalf("failed test server address is nil")
 	}
 
-	if config.Server.Port == "" {
+	if bridgeConfig.Server.Port == "" {
 		t.Fatalf("failed test server port is nil")
 	}
 }

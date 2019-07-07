@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net"
 	"yox2yox/antone/bridge/accounting"
-	"yox2yox/antone/bridge/config"
 	"yox2yox/antone/bridge/orders"
 	pb "yox2yox/antone/bridge/pb"
+	config "yox2yox/antone/config/bridge"
 
 	"golang.org/x/sync/errgroup"
 
@@ -27,7 +27,7 @@ func New(debug bool) (*Peer, error) {
 	peer := &Peer{}
 
 	{ //setup config
-		config, err := config.ReadConfig()
+		config, err := config.ReadBridgeConfig()
 		if err != nil {
 			return nil, err
 		}

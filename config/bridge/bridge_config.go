@@ -10,16 +10,16 @@ type ServerConfig struct {
 	Port string `json:"port"`
 }
 
-type Config struct {
+type BridgeConfig struct {
 	Server ServerConfig `json:"server"`
 }
 
 var (
-	filename = "config.json"
+	filename = "bridge_config.json"
 )
 
-func ReadConfig() (*Config, error) {
-	config := new(Config)
+func ReadBridgeConfig() (*BridgeConfig, error) {
+	config := new(BridgeConfig)
 
 	jsonString, err := ioutil.ReadFile(filename)
 	if err != nil {
