@@ -10,24 +10,24 @@ import (
 )
 
 type Worker struct {
-	addr       string
-	reputation int
+	Addr       string
+	Reputation int
 }
 
 type Endpoint struct {
-	accounting *accounting.Service
-	pickNum    int
+	Accounting *accounting.Service
+	PickNum    int
 }
 
 func NewEndpoint(accounting *accounting.Service) *Endpoint {
 	return &Endpoint{
-		accounting: accounting,
-		pickNum:    1,
+		Accounting: accounting,
+		PickNum:    1,
 	}
 }
 
 func (e *Endpoint) RequestValidatableCode(ctx context.Context, vCodeRequest *pb.ValidatableCodeRequest) (*pb.ValidatableCode, error) {
-	if e.accounting.GetWorkersCount() < e.pickNum {
+	if e.Accounting.GetWorkersCount() < e.PickNum {
 		return nil, errors.New("There is not enough Wokers")
 	}
 	rand.Seed(time.Now().UnixNano())
