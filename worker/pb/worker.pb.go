@@ -22,7 +22,7 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-type Order struct {
+type ValidatableCodeRequest struct {
 	Bridgeid             string   `protobuf:"bytes,1,opt,name=bridgeid,proto3" json:"bridgeid,omitempty"`
 	Userid               string   `protobuf:"bytes,2,opt,name=userid,proto3" json:"userid,omitempty"`
 	Add                  int32    `protobuf:"varint,3,opt,name=add,proto3" json:"add,omitempty"`
@@ -31,95 +31,48 @@ type Order struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Order) Reset()         { *m = Order{} }
-func (m *Order) String() string { return proto.CompactTextString(m) }
-func (*Order) ProtoMessage()    {}
-func (*Order) Descriptor() ([]byte, []int) {
+func (m *ValidatableCodeRequest) Reset()         { *m = ValidatableCodeRequest{} }
+func (m *ValidatableCodeRequest) String() string { return proto.CompactTextString(m) }
+func (*ValidatableCodeRequest) ProtoMessage()    {}
+func (*ValidatableCodeRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e4ff6184b07e587a, []int{0}
 }
 
-func (m *Order) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_Order.Unmarshal(m, b)
+func (m *ValidatableCodeRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ValidatableCodeRequest.Unmarshal(m, b)
 }
-func (m *Order) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_Order.Marshal(b, m, deterministic)
+func (m *ValidatableCodeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ValidatableCodeRequest.Marshal(b, m, deterministic)
 }
-func (m *Order) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Order.Merge(m, src)
+func (m *ValidatableCodeRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ValidatableCodeRequest.Merge(m, src)
 }
-func (m *Order) XXX_Size() int {
-	return xxx_messageInfo_Order.Size(m)
+func (m *ValidatableCodeRequest) XXX_Size() int {
+	return xxx_messageInfo_ValidatableCodeRequest.Size(m)
 }
-func (m *Order) XXX_DiscardUnknown() {
-	xxx_messageInfo_Order.DiscardUnknown(m)
+func (m *ValidatableCodeRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ValidatableCodeRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Order proto.InternalMessageInfo
+var xxx_messageInfo_ValidatableCodeRequest proto.InternalMessageInfo
 
-func (m *Order) GetBridgeid() string {
+func (m *ValidatableCodeRequest) GetBridgeid() string {
 	if m != nil {
 		return m.Bridgeid
 	}
 	return ""
 }
 
-func (m *Order) GetUserid() string {
+func (m *ValidatableCodeRequest) GetUserid() string {
 	if m != nil {
 		return m.Userid
 	}
 	return ""
 }
 
-func (m *Order) GetAdd() int32 {
+func (m *ValidatableCodeRequest) GetAdd() int32 {
 	if m != nil {
 		return m.Add
-	}
-	return 0
-}
-
-type OrderResult struct {
-	Workerid             string   `protobuf:"bytes,1,opt,name=workerid,proto3" json:"workerid,omitempty"`
-	Result               int32    `protobuf:"varint,2,opt,name=result,proto3" json:"result,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *OrderResult) Reset()         { *m = OrderResult{} }
-func (m *OrderResult) String() string { return proto.CompactTextString(m) }
-func (*OrderResult) ProtoMessage()    {}
-func (*OrderResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e4ff6184b07e587a, []int{1}
-}
-
-func (m *OrderResult) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_OrderResult.Unmarshal(m, b)
-}
-func (m *OrderResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_OrderResult.Marshal(b, m, deterministic)
-}
-func (m *OrderResult) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OrderResult.Merge(m, src)
-}
-func (m *OrderResult) XXX_Size() int {
-	return xxx_messageInfo_OrderResult.Size(m)
-}
-func (m *OrderResult) XXX_DiscardUnknown() {
-	xxx_messageInfo_OrderResult.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_OrderResult proto.InternalMessageInfo
-
-func (m *OrderResult) GetWorkerid() string {
-	if m != nil {
-		return m.Workerid
-	}
-	return ""
-}
-
-func (m *OrderResult) GetResult() int32 {
-	if m != nil {
-		return m.Result
 	}
 	return 0
 }
@@ -136,7 +89,7 @@ func (m *ValidatableCode) Reset()         { *m = ValidatableCode{} }
 func (m *ValidatableCode) String() string { return proto.CompactTextString(m) }
 func (*ValidatableCode) ProtoMessage()    {}
 func (*ValidatableCode) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e4ff6184b07e587a, []int{2}
+	return fileDescriptor_e4ff6184b07e587a, []int{1}
 }
 
 func (m *ValidatableCode) XXX_Unmarshal(b []byte) error {
@@ -181,7 +134,7 @@ func (m *ValidationResult) Reset()         { *m = ValidationResult{} }
 func (m *ValidationResult) String() string { return proto.CompactTextString(m) }
 func (*ValidationResult) ProtoMessage()    {}
 func (*ValidationResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e4ff6184b07e587a, []int{3}
+	return fileDescriptor_e4ff6184b07e587a, []int{2}
 }
 
 func (m *ValidationResult) XXX_Unmarshal(b []byte) error {
@@ -203,8 +156,7 @@ func (m *ValidationResult) XXX_DiscardUnknown() {
 var xxx_messageInfo_ValidationResult proto.InternalMessageInfo
 
 func init() {
-	proto.RegisterType((*Order)(nil), "pb.Order")
-	proto.RegisterType((*OrderResult)(nil), "pb.OrderResult")
+	proto.RegisterType((*ValidatableCodeRequest)(nil), "pb.ValidatableCodeRequest")
 	proto.RegisterType((*ValidatableCode)(nil), "pb.ValidatableCode")
 	proto.RegisterType((*ValidationResult)(nil), "pb.ValidationResult")
 }
@@ -212,22 +164,21 @@ func init() {
 func init() { proto.RegisterFile("worker.proto", fileDescriptor_e4ff6184b07e587a) }
 
 var fileDescriptor_e4ff6184b07e587a = []byte{
-	// 230 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x5c, 0x90, 0x41, 0x4b, 0xc4, 0x30,
-	0x10, 0x46, 0xb7, 0x5d, 0x53, 0xec, 0x28, 0x74, 0x19, 0x45, 0x4a, 0x4f, 0x4b, 0x4e, 0xeb, 0xa5,
-	0x07, 0x3d, 0x78, 0x13, 0xc4, 0xb3, 0x08, 0x39, 0xe8, 0x39, 0x61, 0x82, 0x04, 0x8b, 0x29, 0xd3,
-	0x2e, 0xfe, 0x7d, 0xc9, 0xb4, 0xdb, 0xca, 0xde, 0xe6, 0x4d, 0x66, 0xde, 0x37, 0x04, 0xae, 0x7f,
-	0x23, 0x7f, 0x7b, 0x6e, 0x7b, 0x8e, 0x63, 0xc4, 0xbc, 0x77, 0xfa, 0x0d, 0xd4, 0x3b, 0x93, 0x67,
-	0x6c, 0xe0, 0xd2, 0x71, 0xa0, 0x2f, 0x1f, 0xa8, 0xce, 0xf6, 0xd9, 0xa1, 0x34, 0x0b, 0xe3, 0x1d,
-	0x14, 0xc7, 0xc1, 0x73, 0xa0, 0x3a, 0x97, 0x97, 0x99, 0x70, 0x07, 0x5b, 0x4b, 0x54, 0x6f, 0xf7,
-	0xd9, 0x41, 0x99, 0x54, 0xea, 0x17, 0xb8, 0x12, 0x9d, 0xf1, 0xc3, 0xb1, 0x1b, 0x93, 0x74, 0x4a,
-	0x5c, 0xa5, 0x27, 0x4e, 0x52, 0x96, 0x29, 0x91, 0x2a, 0x33, 0x93, 0x7e, 0x82, 0xea, 0xc3, 0x76,
-	0x81, 0xec, 0x68, 0x5d, 0xe7, 0x5f, 0x23, 0x79, 0x44, 0xb8, 0x48, 0x28, 0x0a, 0x65, 0xa4, 0x3e,
-	0x65, 0xe7, 0x6b, 0x36, 0xc2, 0x6e, 0x5e, 0x0c, 0xf1, 0x67, 0x3a, 0xe0, 0x61, 0x80, 0xe2, 0x53,
-	0x02, 0xf1, 0x1e, 0x4a, 0xb9, 0x2c, 0x21, 0x96, 0x6d, 0xef, 0x5a, 0xc1, 0xa6, 0x5a, 0xca, 0x69,
-	0x45, 0x6f, 0xf0, 0x19, 0x2a, 0x69, 0xac, 0x36, 0xbc, 0x49, 0x53, 0x67, 0x67, 0x35, 0xb7, 0xff,
-	0x9a, 0x4b, 0xa4, 0xde, 0xb8, 0x42, 0xbe, 0xf7, 0xf1, 0x2f, 0x00, 0x00, 0xff, 0xff, 0x95, 0x59,
-	0xf6, 0xc5, 0x6e, 0x01, 0x00, 0x00,
+	// 219 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x29, 0xcf, 0x2f, 0xca,
+	0x4e, 0x2d, 0xd2, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2a, 0x48, 0x52, 0x8a, 0xe3, 0x12,
+	0x0b, 0x4b, 0xcc, 0xc9, 0x4c, 0x49, 0x2c, 0x49, 0x4c, 0xca, 0x49, 0x75, 0xce, 0x4f, 0x49, 0x0d,
+	0x4a, 0x2d, 0x2c, 0x4d, 0x2d, 0x2e, 0x11, 0x92, 0xe2, 0xe2, 0x48, 0x2a, 0xca, 0x4c, 0x49, 0x4f,
+	0xcd, 0x4c, 0x91, 0x60, 0x54, 0x60, 0xd4, 0xe0, 0x0c, 0x82, 0xf3, 0x85, 0xc4, 0xb8, 0xd8, 0x4a,
+	0x8b, 0x53, 0x8b, 0x32, 0x53, 0x24, 0x98, 0xc0, 0x32, 0x50, 0x9e, 0x90, 0x00, 0x17, 0x73, 0x62,
+	0x4a, 0x8a, 0x04, 0xb3, 0x02, 0xa3, 0x06, 0x6b, 0x10, 0x88, 0xa9, 0x64, 0xce, 0xc5, 0x8f, 0x66,
+	0xbe, 0x90, 0x10, 0x17, 0x0b, 0x88, 0x0b, 0x36, 0x94, 0x35, 0x08, 0xcc, 0x86, 0x69, 0x64, 0x42,
+	0x68, 0x14, 0xe2, 0x12, 0x80, 0x6a, 0xcc, 0xcc, 0xcf, 0x0b, 0x4a, 0x2d, 0x2e, 0xcd, 0x29, 0x31,
+	0x9a, 0xc8, 0xc8, 0xc5, 0x16, 0x0e, 0xf6, 0x81, 0x90, 0x1d, 0x17, 0xbf, 0x7f, 0x51, 0x4a, 0x6a,
+	0x11, 0x42, 0x8d, 0x90, 0xb0, 0x5e, 0x41, 0x92, 0x1e, 0x9a, 0x65, 0x52, 0x22, 0x48, 0x82, 0x70,
+	0x83, 0x94, 0x18, 0x84, 0xdc, 0xb9, 0x84, 0xdc, 0x53, 0x4b, 0xd0, 0x9d, 0x26, 0x85, 0xc5, 0x08,
+	0x68, 0x78, 0x48, 0x61, 0x33, 0x5e, 0x89, 0x21, 0x89, 0x0d, 0x1c, 0x96, 0xc6, 0x80, 0x00, 0x00,
+	0x00, 0xff, 0xff, 0xac, 0x5c, 0x13, 0x68, 0x5b, 0x01, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -242,8 +193,8 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type WorkerClient interface {
-	OrderWork(ctx context.Context, in *Order, opts ...grpc.CallOption) (*OrderResult, error)
 	OrderValidation(ctx context.Context, in *ValidatableCode, opts ...grpc.CallOption) (*ValidationResult, error)
+	GetValidatableCode(ctx context.Context, in *ValidatableCodeRequest, opts ...grpc.CallOption) (*ValidatableCode, error)
 }
 
 type workerClient struct {
@@ -252,15 +203,6 @@ type workerClient struct {
 
 func NewWorkerClient(cc *grpc.ClientConn) WorkerClient {
 	return &workerClient{cc}
-}
-
-func (c *workerClient) OrderWork(ctx context.Context, in *Order, opts ...grpc.CallOption) (*OrderResult, error) {
-	out := new(OrderResult)
-	err := c.cc.Invoke(ctx, "/pb.Worker/OrderWork", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *workerClient) OrderValidation(ctx context.Context, in *ValidatableCode, opts ...grpc.CallOption) (*ValidationResult, error) {
@@ -272,32 +214,23 @@ func (c *workerClient) OrderValidation(ctx context.Context, in *ValidatableCode,
 	return out, nil
 }
 
+func (c *workerClient) GetValidatableCode(ctx context.Context, in *ValidatableCodeRequest, opts ...grpc.CallOption) (*ValidatableCode, error) {
+	out := new(ValidatableCode)
+	err := c.cc.Invoke(ctx, "/pb.Worker/GetValidatableCode", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WorkerServer is the server API for Worker service.
 type WorkerServer interface {
-	OrderWork(context.Context, *Order) (*OrderResult, error)
 	OrderValidation(context.Context, *ValidatableCode) (*ValidationResult, error)
+	GetValidatableCode(context.Context, *ValidatableCodeRequest) (*ValidatableCode, error)
 }
 
 func RegisterWorkerServer(s *grpc.Server, srv WorkerServer) {
 	s.RegisterService(&_Worker_serviceDesc, srv)
-}
-
-func _Worker_OrderWork_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Order)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerServer).OrderWork(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Worker/OrderWork",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerServer).OrderWork(ctx, req.(*Order))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _Worker_OrderValidation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -318,17 +251,35 @@ func _Worker_OrderValidation_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Worker_GetValidatableCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidatableCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkerServer).GetValidatableCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/pb.Worker/GetValidatableCode",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkerServer).GetValidatableCode(ctx, req.(*ValidatableCodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Worker_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "pb.Worker",
 	HandlerType: (*WorkerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "OrderWork",
-			Handler:    _Worker_OrderWork_Handler,
-		},
-		{
 			MethodName: "OrderValidation",
 			Handler:    _Worker_OrderValidation_Handler,
+		},
+		{
+			MethodName: "GetValidatableCode",
+			Handler:    _Worker_GetValidatableCode_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

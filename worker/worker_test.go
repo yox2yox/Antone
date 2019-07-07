@@ -44,7 +44,7 @@ func TestOrderWorkSuccess(t *testing.T) {
 	client := pb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	orderResult, err := client.OrderWork(ctx, &pb.Order{Bridgeid: "0", Userid: "0", Add: 10})
+	orderResult, err := client.GetValidatableCode(ctx, &pb.ValidatableCodeRequest{Bridgeid: "0", Userid: "0", Add: 10})
 	t.Logf("%#v", orderResult)
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
@@ -52,19 +52,4 @@ func TestOrderWorkSuccess(t *testing.T) {
 	if orderResult == nil {
 		t.Fatalf("failed test orderResult is nil")
 	}
-	if orderResult.Result != 10 {
-		t.Fatalf("failed adding number")
-	}
-	orderResult, err = client.OrderWork(ctx, &pb.Order{Bridgeid: "0", Userid: "0", Add: 10})
-	t.Logf("%#v", orderResult)
-	if err != nil {
-		t.Fatalf("failed test %#v", err)
-	}
-	if orderResult == nil {
-		t.Fatalf("failed test orderResult is nil")
-	}
-	if orderResult.Result != 20 {
-		t.Fatalf("failed adding number")
-	}
-
 }

@@ -19,17 +19,17 @@ func NewEndpoint() *Endpoint {
 	}
 }
 
-func (e *Endpoint) OrderWork(ctx context.Context, order *pb.Order) (*pb.OrderResult, error) {
-	userid := order.Userid
+func (e *Endpoint) GetValidatableCode(ctx context.Context, vCodeRequest *pb.ValidatableCodeRequest) (*pb.ValidatableCode, error) {
+	userid := vCodeRequest.Userid
 	data, exist := e.db[userid]
 	if !exist {
 		return nil, errors.New("user's data is not exsist")
 	}
-	return &pb.OrderResult{Workerid: e.id, Result: data + order.Add}, nil
+	return &pb.ValidatableCode{Data: data, Add: vCodeRequest.Add}, nil
 }
 
 func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.ValidatableCode) (*pb.ValidationResult, error) {
-	result := validatableCode.Data + validatableCode.Add
+	_ = validatableCode.Data + validatableCode.Add
 	//Commit Validation
 	return &pb.ValidationResult{}, nil
 }
