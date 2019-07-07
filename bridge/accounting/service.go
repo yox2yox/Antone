@@ -37,6 +37,10 @@ func NewService() *Service {
 	}
 }
 
+func (s *Service) GetWorkersCount() int {
+	return len(s.workers)
+}
+
 func (s *Service) GetValidationWorkers(num int) []Worker {
 	rand.Seed(time.Now().UnixNano())
 
