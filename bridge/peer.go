@@ -1,13 +1,14 @@
-package order
+package bridge
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net"
+	"net/http"
 	"yox2yox/antone/bridge/accounting"
+	config "yox2yox/antone/bridge/config"
 	"yox2yox/antone/bridge/orders"
 	pb "yox2yox/antone/bridge/pb"
-	config "yox2yox/antone/config/bridge"
 
 	"golang.org/x/sync/errgroup"
 
@@ -31,11 +32,16 @@ func New(debug bool) (*Peer, error) {
 		if err != nil {
 			return nil, err
 		}
-		peer.ServerConfig = &config.Server
+		if config == nil {
+			return nil, errors.New("config is nil")
+		}
+		peer.ServerConfig = config.Server
 	}
 
 	{ //setup Server
-		lis, err := net.Listen("tcp", fmt.Sprintf("%s", peer.ServerConfig.Addr))
+		print("%s", peer.ServerConfig.Addr)
+		print("%v", peer.ServerConfig)
+		lis, err := net.Listen("tcp", peer.ServerConfig.Addr)
 		if err != nil {
 			return nil, err
 		}
@@ -60,7 +66,22 @@ func New(debug bool) (*Peer, error) {
 func (p *Peer) Run(ctx context.Context) error {
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
-		return p.GrpcServer.Serve(*p.Listner)
+		err := p.GrpcServer.Serve(*p.Listner)
+		if err == context.Canceled || err == grpc.ErrServerStopped || err == http.ErrServerClosed {
+			return nil
+		}
+		return err
 	})
 	return group.Wait()
+}
+
+func (p *Peer) Close() error {
+	if p.GrpcServer != nil {
+		p.GrpcServer.Stop()
+	}
+	if p.Listner != nil {
+		err := (*p.Listner).Close()
+		return err
+	}
+	return nil
 }
