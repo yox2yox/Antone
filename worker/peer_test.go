@@ -12,10 +12,9 @@ import (
 )
 
 //---------------------------------------------------------------
-//ユーティリティ
+//共通部
 
 func PeerRun(peer *Peer, ctx context.Context) error {
-
 	err := peer.Run(ctx)
 	if err != nil {
 		return err
@@ -82,7 +81,7 @@ func TestPeer_RunAndClose(t *testing.T) {
 	wg.Wait()
 }
 
-//
+//GetValidatableCodeリクエストを正しく処理するか
 func TestWorkerEndpoint_ResponseValidatableCode(t *testing.T) {
 	peer, err := InitPeer()
 	if err != nil {
@@ -118,6 +117,7 @@ func TestWorkerEndpoint_ResponseValidatableCode(t *testing.T) {
 
 }
 
+//OrderValidationを正しく処理するか
 func TestWorkerEndpoint_Validate(t *testing.T) {
 	peer, err := InitPeer()
 	if err != nil {
@@ -156,6 +156,7 @@ func TestWorkerEndpoint_Validate(t *testing.T) {
 
 }
 
+//UpdateDatabaseを正しく処理するか
 func TestWorkerEndpoint_UpdateDb(t *testing.T) {
 	peer, err := InitPeer()
 	if err != nil {
