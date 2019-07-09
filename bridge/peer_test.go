@@ -11,12 +11,29 @@ import (
 	"google.golang.org/grpc"
 )
 
-func TestPeerInit(t *testing.T) {
+func PeerRun(peer *Peer, ctx context.Context) error {
+
+	err := peer.Run(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func InitPeer() (*Peer, error) {
 	config, err := config.ReadBridgeConfig()
 	if err != nil {
-		t.Fatalf("failed read config %#v", err)
+		return nil, err
 	}
 	peer, err := New(config.Server, true)
+	if err != nil {
+		return nil, err
+	}
+	return peer, nil
+}
+
+func TestPeer_Initialize(t *testing.T) {
+	peer, err := InitPeer()
 	defer peer.Close()
 	if err != nil {
 		t.Fatalf("failed init peer %#v", err)
@@ -38,24 +55,22 @@ func TestPeerInit(t *testing.T) {
 	}
 }
 
-func TestPeerRunAndClose(t *testing.T) {
+func TestPeer_RunAndClose(t *testing.T) {
 	wg := sync.WaitGroup{}
-	config, err := config.ReadBridgeConfig()
+
+	peer, err := InitPeer()
 	if err != nil {
-		t.Fatalf("failed read config %#v", err)
+		t.Fatalf("failed initializing peer %#v", err)
 	}
-	peer, err := New(config.Server, true)
-	if err != nil {
-		t.Fatalf("failed peer init %#v", err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
 	wg.Add(1)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	go func() {
-		defer wg.Done()
-		err = peer.Run(ctx)
+		err := PeerRun(peer, ctx)
 		if err != nil {
-			t.Fatalf("failed peer run %#v", err)
+			t.Fatalf("failed closing peer %#v", err)
 		}
+		defer wg.Done()
 	}()
 	cancel()
 	err = peer.Close()
@@ -65,25 +80,24 @@ func TestPeerRunAndClose(t *testing.T) {
 	wg.Wait()
 }
 
-func TestPeerRunOrderEndpoint(t *testing.T) {
-	config, err := config.ReadBridgeConfig()
+func TestOrderEndpoint_ResponseValidatableCode(t *testing.T) {
+
+	peer, err := InitPeer()
 	if err != nil {
-		t.Fatalf("failed read config %#v", err)
+		t.Fatalf("failed initializing peer %#v", err)
 	}
-	peer, err := New(config.Server, true)
-	if err != nil {
-		t.Fatalf("failed peer init %#v", err)
-	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	go func() {
-		err = peer.Run(ctx)
+		err := PeerRun(peer, ctx)
 		if err != nil {
-			t.Fatalf("failed peer run %#v", err)
+			t.Fatalf("failed closing peer %#v", err)
 		}
 	}()
 	defer cancel()
 	defer peer.Close()
-	conn, err := grpc.Dial(config.Server.Addr, grpc.WithInsecure())
+
+	conn, err := grpc.Dial(peer.ServerConfig.Addr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
 	}
