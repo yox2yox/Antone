@@ -2,7 +2,6 @@ package bridge
 
 import (
 	"context"
-	"errors"
 	"net"
 	"net/http"
 	"yox2yox/antone/bridge/accounting"
@@ -18,24 +17,19 @@ import (
 type Peer struct {
 	GrpcServer   *grpc.Server
 	ServerConfig *config.ServerConfig
+	Addr         string
+	port         string
 	Listner      *net.Listener
 	Accounting   *accounting.Service
 	Orders       *orders.Service
 }
 
-func New(debug bool) (*Peer, error) {
+func New(config *config.ServerConfig, debug bool) (*Peer, error) {
 
 	peer := &Peer{}
 
 	{ //setup config
-		config, err := config.ReadBridgeConfig()
-		if err != nil {
-			return nil, err
-		}
-		if config == nil {
-			return nil, errors.New("config is nil")
-		}
-		peer.ServerConfig = config.Server
+		peer.ServerConfig = config
 	}
 
 	{ //setup Server

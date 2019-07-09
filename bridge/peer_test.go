@@ -12,7 +12,11 @@ import (
 )
 
 func TestPeerInit(t *testing.T) {
-	peer, err := New(true)
+	config, err := config.ReadBridgeConfig()
+	if err != nil {
+		t.Fatalf("failed read config %#v", err)
+	}
+	peer, err := New(config.Server, true)
 	defer peer.Close()
 	if err != nil {
 		t.Fatalf("failed init peer %#v", err)
@@ -36,7 +40,11 @@ func TestPeerInit(t *testing.T) {
 
 func TestPeerRunAndClose(t *testing.T) {
 	wg := sync.WaitGroup{}
-	peer, err := New(true)
+	config, err := config.ReadBridgeConfig()
+	if err != nil {
+		t.Fatalf("failed read config %#v", err)
+	}
+	peer, err := New(config.Server, true)
 	if err != nil {
 		t.Fatalf("failed peer init %#v", err)
 	}
@@ -58,7 +66,11 @@ func TestPeerRunAndClose(t *testing.T) {
 }
 
 func TestPeerRunOrderEndpoint(t *testing.T) {
-	peer, err := New(true)
+	config, err := config.ReadBridgeConfig()
+	if err != nil {
+		t.Fatalf("failed read config %#v", err)
+	}
+	peer, err := New(config.Server, true)
 	if err != nil {
 		t.Fatalf("failed peer init %#v", err)
 	}
@@ -71,10 +83,6 @@ func TestPeerRunOrderEndpoint(t *testing.T) {
 	}()
 	defer cancel()
 	defer peer.Close()
-	config, err := config.ReadBridgeConfig()
-	if err != nil {
-		t.Fatalf("failed test %#v", err)
-	}
 	conn, err := grpc.Dial(config.Server.Addr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
