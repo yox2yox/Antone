@@ -27,7 +27,7 @@ func TestPeerInit(t *testing.T) {
 	if peer.ServerConfig == nil {
 		t.Fatalf("failed init peer ServerConfig is nil")
 	}
-	if peer.Listner == nil {
+	if peer.Listener == nil {
 		t.Fatalf("failed init peer Listener is nil")
 	}
 	if peer.Accounting == nil {
