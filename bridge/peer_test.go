@@ -11,6 +11,11 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	testWorkerId   = "worker0"
+	testWorkerAddr = "localhost:10000"
+)
+
 func PeerRun(peer *Peer, ctx context.Context) error {
 
 	err := peer.Run(ctx)
@@ -60,7 +65,7 @@ func TestPeer_RunAndClose(t *testing.T) {
 
 	peer, err := InitPeer()
 	if err != nil {
-		t.Fatalf("failed initializing peer %#v", err)
+		t.Fatalf("failed to initialize peer %#v", err)
 	}
 
 	wg.Add(1)
@@ -68,14 +73,14 @@ func TestPeer_RunAndClose(t *testing.T) {
 	go func() {
 		err := PeerRun(peer, ctx)
 		if err != nil {
-			t.Fatalf("failed closing peer %#v", err)
+			t.Fatalf("failed to close peer %#v", err)
 		}
 		defer wg.Done()
 	}()
 	cancel()
 	err = peer.Close()
 	if err != nil {
-		t.Fatalf("failed close peer %#v", err)
+		t.Fatalf("failed to close peer %#v", err)
 	}
 	wg.Wait()
 }
@@ -84,18 +89,23 @@ func TestOrderEndpoint_ResponseValidatableCode(t *testing.T) {
 
 	peer, err := InitPeer()
 	if err != nil {
-		t.Fatalf("failed initializing peer %#v", err)
+		t.Fatalf("failed to initialize peer %#v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	go func() {
 		err := PeerRun(peer, ctx)
 		if err != nil {
-			t.Fatalf("failed closing peer %#v", err)
+			t.Fatalf("failed to close peer %#v", err)
 		}
 	}()
 	defer cancel()
 	defer peer.Close()
+
+	_, err = peer.Accounting.CreateNewWorker(testWorkerId, testWorkerAddr)
+	if err != nil {
+		t.Fatalf("failed to create worker %#v", err)
+	}
 
 	conn, err := grpc.Dial(peer.ServerConfig.Addr, grpc.WithInsecure())
 	if err != nil {

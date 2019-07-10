@@ -13,9 +13,17 @@ import (
 )
 
 var (
-	tls        = false
-	serverAddr = "127.0.0.1:10000"
-	port       = "10000"
+	tls           = false
+	serverAddr    = "127.0.0.1:10000"
+	port          = "10000"
+	testClientId  = "client0"
+	testWorkersId = []string{
+		"worker0",
+		"worker1",
+		"worker2",
+		"worker3",
+	}
+	testWorkerAddr = "addr"
 )
 
 func UpServer() (*grpc.Server, net.Listener, error) {
@@ -43,19 +51,28 @@ func UpServer() (*grpc.Server, net.Listener, error) {
 
 func TestCreateOrderSuccess(t *testing.T) {
 	grpcServer, listen, err := UpServer()
+	accounting := accounting.NewService(true)
+	endpoint := NewEndpoint(accounting)
 	go func() {
-		pb.RegisterOrdersServer(grpcServer, NewEndpoint(accounting.NewService(true)))
+		pb.RegisterOrdersServer(grpcServer, endpoint)
 		grpcServer.Serve(listen)
 		if err != nil {
 			t.Fatalf("failed test %#v", err)
 		}
 	}()
 	defer grpcServer.Stop()
+
+	for _, workerid := range testWorkersId {
+		_, err = accounting.CreateNewWorker(workerid, testWorkerAddr)
+		if err != nil {
+			t.Fatalf("failed to create worker %#v", err)
+		}
+	}
+
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
 	}
-	t.Log("Complete to up server")
 	defer conn.Close()
 	client := pb.NewOrdersClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -68,13 +85,38 @@ func TestCreateOrderSuccess(t *testing.T) {
 	if orderInfo == nil {
 		t.Fatalf("failed test orderinfo is nil")
 	}
+
 }
 
 func TestValidateCodeSuccess(t *testing.T) {
 	accounting := accounting.NewService(true)
+
+	_, err := accounting.CreateNewWorker(testWorkersId[0], testWorkerAddr)
+	if err != nil {
+		t.Fatalf("failed to create new worker %#v", err)
+	}
+
+	workers, err := accounting.SelectValidationWorkers(1)
+	if err != nil {
+		t.Fatalf("failed to select worker %#v", err)
+	}
+	if len(workers) <= 0 || workers[0] == nil {
+		t.Fatalf("selected worker's data is broken")
+	}
+	for _, worker := range workers {
+		err = accounting.RegistarDBHolder(testClientId, worker.Id)
+		if err != nil {
+			t.Fatalf("failed to registar holder %#v", err)
+		}
+	}
+
 	orderService := NewService(accounting, true)
-	orderService.ValidateCode("holder0", &pb.ValidatableCode{Data: 10, Add: 0})
-	if len(orderService.GetOrders()[0].OrderResults) <= 0 {
-		t.Fatalf("failed test cannot validate order")
+	err = orderService.ValidateCode(workers[0].Id, &pb.ValidatableCode{Data: 10, Add: 0})
+	if err != nil {
+		t.Fatalf("failed to registar validate code %#v", err)
+	}
+	waitList := orderService.GetOrders()
+	if len(waitList) <= 0 || len(waitList[0].OrderResults) <= 0 {
+		t.Fatalf("failed to validate order")
 	}
 }

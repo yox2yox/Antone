@@ -26,28 +26,17 @@ type Service struct {
 }
 
 var (
+	ErrIDNotExist          = errors.New("this id doesn't exist")
 	ErrIDAlreadyExists     = errors.New("this id already exsits")
 	ErrWorkersAreNotEnough = errors.New("There are not enough workers")
 )
 
 func NewService(withoutCommunicationForTest bool) *Service {
 	return &Service{
-		Workers: map[string]*Worker{
-			"worker0": &Worker{
-				Addr:       "127.0.0.1:10000",
-				Id:         "woker0",
-				Reputation: 0,
-			},
-		},
-		Clients: map[string]*Client{},
-		WorkersId: []string{
-			"worker0",
-		},
-		Holders: map[string][]string{
-			"client0": []string{
-				"worker0",
-			},
-		},
+		Workers:                     map[string]*Worker{},
+		Clients:                     map[string]*Client{},
+		WorkersId:                   []string{},
+		Holders:                     map[string][]string{},
 		WithoutCommunicationForTest: withoutCommunicationForTest,
 	}
 }
@@ -56,6 +45,7 @@ func (s *Service) GetWorkersCount() int {
 	return len(s.Workers)
 }
 
+//workerの中からnum台選択して返す
 func (s *Service) SelectValidationWorkers(num int) ([]*Worker, error) {
 	if len(s.Workers) < num {
 		return nil, ErrWorkersAreNotEnough
@@ -71,10 +61,40 @@ func (s *Service) SelectValidationWorkers(num int) ([]*Worker, error) {
 	return picked, nil
 }
 
+//userIdのデータを保有しているHolderの中から一台選択して返す
 func (s *Service) SelectDBHolder(userId string) *Worker {
 	rand.Seed(time.Now().UnixNano())
 	holderid := s.Holders[userId][rand.Intn(len(s.Holders))]
 	return s.Workers[holderid]
+}
+
+//新規holderを登録する
+func (s *Service) RegistarDBHolder(userId string, workerid string) error {
+	rand.Seed(time.Now().UnixNano())
+	_, exist := s.Workers[workerid]
+	if exist == false {
+		return ErrIDNotExist
+	}
+	for _, holder := range s.Holders[userId] {
+		if holder == workerid {
+			return ErrIDAlreadyExists
+		}
+	}
+
+	//Remoteワーカに新規DB登録リクエスト送信
+	//TODO:実装
+	/*if !s.WithoutCommunicationForTest {
+		conn, err := grpc.Dial(remote.Addr, grpc.WithInsecure())
+		workerClient := workerpb.NewWorkerClient(conn)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add}
+		validationResult, err := workerClient.OrderValidation(ctx, vCodeWorker)
+	}*/
+
+	s.Holders[userId] = append(s.Holders[userId], workerid)
+	return nil
 }
 
 //Workerアカウントを新規作成
@@ -88,6 +108,7 @@ func (s *Service) CreateNewWorker(workerId string, Addr string) (*Worker, error)
 		Id:         workerId,
 		Reputation: 0,
 	}
+	s.WorkersId = append(s.WorkersId, workerId)
 	return s.Workers[workerId], nil
 }
 
