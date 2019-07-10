@@ -44,7 +44,7 @@ func UpServer() (*grpc.Server, net.Listener, error) {
 func TestCreateOrderSuccess(t *testing.T) {
 	grpcServer, listen, err := UpServer()
 	go func() {
-		pb.RegisterOrdersServer(grpcServer, NewEndpoint(accounting.NewService()))
+		pb.RegisterOrdersServer(grpcServer, NewEndpoint(accounting.NewService(true)))
 		grpcServer.Serve(listen)
 		if err != nil {
 			t.Fatalf("failed test %#v", err)
@@ -71,7 +71,7 @@ func TestCreateOrderSuccess(t *testing.T) {
 }
 
 func TestValidateCodeSuccess(t *testing.T) {
-	accounting := accounting.NewService()
+	accounting := accounting.NewService(true)
 	orderService := NewService(accounting, true)
 	orderService.ValidateCode("holder0", &pb.ValidatableCode{Data: 10, Add: 0})
 	if len(orderService.GetOrders()[0].OrderResults) <= 0 {

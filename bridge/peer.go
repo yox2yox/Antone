@@ -43,7 +43,7 @@ func New(config *config.ServerConfig, debug bool) (*Peer, error) {
 	}
 
 	{ //setup Accounting
-		peer.Accounting = accounting.NewService()
+		peer.Accounting = accounting.NewService(false)
 	}
 
 	{ //setup orders

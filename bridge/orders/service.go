@@ -52,7 +52,7 @@ func (s *Service) GetOrders() []*Order {
 
 func (s *Service) ValidateCode(holderId string, vCode *pb.ValidatableCode) error {
 
-	pickedWorkers, err := s.Accounting.GetValidationWorkers(1)
+	pickedWorkers, err := s.Accounting.SelectValidationWorkers(1)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (s *Service) ValidateCode(holderId string, vCode *pb.ValidatableCode) error
 
 	for _, worker := range pickedWorkers {
 		if s.Debug == false {
-			go func(target accounting.Worker) {
+			go func(target *accounting.Worker) {
 				conn, err := grpc.Dial(target.Addr, grpc.WithInsecure())
 				workerClient := workerpb.NewWorkerClient(conn)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
