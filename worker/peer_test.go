@@ -5,9 +5,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"yox2yox/antone/worker"
 	config "yox2yox/antone/worker/config"
 	pb "yox2yox/antone/worker/pb"
-	"yox2yox/antone/worker"
 
 	"google.golang.org/grpc"
 )
@@ -103,8 +103,6 @@ func TestWorkerEndpoint_ResponseValidatableCode(t *testing.T) {
 	defer cancel()
 	defer peer.Close()
 
-	peer.DataPool.CreateNewDataPool(testUserId)
-
 	conn, err := grpc.Dial(peer.ServerConfig.Addr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
@@ -113,6 +111,13 @@ func TestWorkerEndpoint_ResponseValidatableCode(t *testing.T) {
 	client := pb.NewWorkerClient(conn)
 	ctxClient, cancelClient := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelClient()
+
+	_, err = client.GetValidatableCode(ctxClient, &pb.ValidatableCodeRequest{Bridgeid: "bridge0", Userid: testUserId, Add: 10})
+	if err == nil {
+		t.Fatalf("want error but nil")
+	}
+
+	peer.DataPool.CreateNewDataPool(testUserId)
 
 	vCode, err := client.GetValidatableCode(ctxClient, &pb.ValidatableCodeRequest{Bridgeid: "bridge0", Userid: testUserId, Add: 10})
 	if err != nil {
@@ -180,8 +185,6 @@ func TestWorkerEndpoint_UpdateDb(t *testing.T) {
 	defer cancel()
 	defer peer.Close()
 
-	peer.DataPool.CreateNewDataPool(testUserId)
-
 	conn, err := grpc.Dial(peer.ServerConfig.Addr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
@@ -192,6 +195,13 @@ func TestWorkerEndpoint_UpdateDb(t *testing.T) {
 	defer cancelClient()
 
 	dbUpdate, err := client.UpdateDatapool(ctxClient, &pb.DatapoolUpdate{Userid: testUserId, Pool: 6})
+	if err == nil {
+		t.Fatalf("want error, but nil")
+	}
+
+	peer.DataPool.CreateNewDataPool(testUserId)
+
+	dbUpdate, err = client.UpdateDatapool(ctxClient, &pb.DatapoolUpdate{Userid: testUserId, Pool: 6})
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
 	}
