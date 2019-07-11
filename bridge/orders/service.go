@@ -76,7 +76,7 @@ func (s *Service) ValidateCode(holderId string, vCode *pb.ValidatableCode) error
 					order.OrderResults[target.Id] = OrderResult{Db: 0, IsRejected: false, IsError: true}
 					return
 				} else {
-					order.OrderResults[target.Id] = OrderResult{Db: validationResult.Db, IsRejected: false, IsError: true}
+					order.OrderResults[target.Id] = OrderResult{Db: validationResult.Pool, IsRejected: false, IsError: true}
 					return
 				}
 

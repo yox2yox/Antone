@@ -3,41 +3,70 @@ package worker
 import (
 	"context"
 	"errors"
+	"yox2yox/antone/worker/datapool"
 	pb "yox2yox/antone/worker/pb"
 )
 
 type Endpoint struct {
-	Db map[string]int32
-	Id string
+	Datapool *datapool.Service
+	Db       map[string]int32
+	Id       string
 }
 
-func NewEndpoint() *Endpoint {
+func NewEndpoint(datapool *datapool.Service) *Endpoint {
 	return &Endpoint{
+		Datapool: datapool,
 		Db: map[string]int32{
 			"client0": 0,
 		},
 	}
 }
 
+var (
+	ErrDataPoolAlreadyExist = errors.New("this user's datapool already exists")
+	ErrDataPoolNotExist     = errors.New("this user's datapool does not exist")
+)
+
 func (e *Endpoint) GetValidatableCode(ctx context.Context, vCodeRequest *pb.ValidatableCodeRequest) (*pb.ValidatableCode, error) {
 	userid := vCodeRequest.Userid
-	data, exist := e.Db[userid]
-	if !exist {
-		return nil, errors.New("user's data is not exsist")
+	data, err := e.Datapool.GetDataPool(userid)
+	if err == datapool.ErrDataPoolNotExist {
+		return nil, ErrDataPoolNotExist
+	} else if err != nil {
+		return nil, err
 	}
 	return &pb.ValidatableCode{Data: data, Add: vCodeRequest.Add}, nil
 }
 
 func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.ValidatableCode) (*pb.ValidationResult, error) {
-	Db := validatableCode.Data + validatableCode.Add
-	return &pb.ValidationResult{Db: Db, Reject: false}, nil
+	pool := validatableCode.Data + validatableCode.Add
+	return &pb.ValidationResult{Pool: pool, Reject: false}, nil
 }
 
-func (e *Endpoint) UpdateDatabase(ctx context.Context, databaseUpdate *pb.DatabaseUpdate) (*pb.UpdateResult, error) {
-	_, exist := e.Db[databaseUpdate.Userid]
-	if !exist {
-		return nil, errors.New("user's data is not exsist")
+func (e *Endpoint) UpdateDatapool(ctx context.Context, datapoolUpdate *pb.DatapoolUpdate) (*pb.UpdateResult, error) {
+	err := e.Datapool.SetDataPool(datapoolUpdate.Userid, datapoolUpdate.Pool)
+	if err == datapool.ErrDataPoolNotExist {
+		return nil, ErrDataPoolNotExist
+	} else if err != nil {
+		return nil, err
 	}
-	e.Db[databaseUpdate.Userid] = databaseUpdate.Db
-	return &pb.UpdateResult{}, nil
+
+	return &pb.UpdateResult{}, err
+}
+
+func (e *Endpoint) CreateNewDatapool(ctx context.Context, poolInfo *pb.DatapoolInfo) (*pb.CreateDatapoolResult, error) {
+	exist := e.Datapool.ExistDataPool(poolInfo.Userid)
+	if exist {
+		return nil, ErrDataPoolAlreadyExist
+	} else {
+		err := e.Datapool.CreateNewDataPool(poolInfo.Userid)
+		if err != nil {
+			return nil, err
+		}
+	}
+	pool, err := e.Datapool.GetDataPool(poolInfo.Userid)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.CreateDatapoolResult{Pool: pool}, nil
 }

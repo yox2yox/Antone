@@ -2,11 +2,14 @@ syntax = "proto3";
 
 package pb;
 
+//TODO: Rename database to datapool
+
 service Worker {
 
   rpc OrderValidation(ValidatableCode) returns (ValidationResult) {}
   rpc GetValidatableCode(ValidatableCodeRequest) returns (ValidatableCode) {}
-  rpc UpdateDatabase(DatabaseUpdate) returns (UpdateResult) {}
+  rpc UpdateDatapool(DatapoolUpdate) returns (UpdateResult) {}
+  rpc CreateNewDatapool(DatapoolInfo) returns (CreateDatapoolResult) {}
 
 }
 
@@ -22,13 +25,21 @@ message ValidatableCode {
 }
 
 message ValidationResult {
-  int32 db = 1; //データベースの最新データ
+  int32 pool = 1; //データベースの最新データ
   bool reject = 2; //検証失敗
 }
 
-message DatabaseUpdate {
+message DatapoolUpdate {
   string userid = 1;
-  int32 db = 2; //更新後のデータベースデータ
+  int32 pool = 2; //更新後のデータベースデータ
 }
 
 message UpdateResult {}
+
+message DatapoolInfo {
+  string userid = 1;
+}
+
+message CreateDatapoolResult{
+  int32 pool = 1;
+}

@@ -1,4 +1,4 @@
-package worker
+package worker_test
 
 import (
 	"context"
@@ -7,14 +7,19 @@ import (
 	"time"
 	config "yox2yox/antone/worker/config"
 	pb "yox2yox/antone/worker/pb"
+	"yox2yox/antone/worker"
 
 	"google.golang.org/grpc"
+)
+
+var (
+	testUserId = "client0"
 )
 
 //---------------------------------------------------------------
 //共通部
 
-func PeerRun(peer *Peer, ctx context.Context) error {
+func PeerRun(peer *worker.Peer, ctx context.Context) error {
 	err := peer.Run(ctx)
 	if err != nil {
 		return err
@@ -22,12 +27,12 @@ func PeerRun(peer *Peer, ctx context.Context) error {
 	return nil
 }
 
-func InitPeer() (*Peer, error) {
+func InitPeer() (*worker.Peer, error) {
 	config, err := config.ReadWorkerConfig()
 	if err != nil {
 		return nil, err
 	}
-	peer, err := New(config.Server, true)
+	peer, err := worker.New(config.Server, true)
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +103,8 @@ func TestWorkerEndpoint_ResponseValidatableCode(t *testing.T) {
 	defer cancel()
 	defer peer.Close()
 
+	peer.DataPool.CreateNewDataPool(testUserId)
+
 	conn, err := grpc.Dial(peer.ServerConfig.Addr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
@@ -107,7 +114,7 @@ func TestWorkerEndpoint_ResponseValidatableCode(t *testing.T) {
 	ctxClient, cancelClient := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelClient()
 
-	vCode, err := client.GetValidatableCode(ctxClient, &pb.ValidatableCodeRequest{Bridgeid: "bridge0", Userid: "client0", Add: 10})
+	vCode, err := client.GetValidatableCode(ctxClient, &pb.ValidatableCodeRequest{Bridgeid: "bridge0", Userid: testUserId, Add: 10})
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
 	}
@@ -150,8 +157,8 @@ func TestWorkerEndpoint_Validate(t *testing.T) {
 	if vRes == nil {
 		t.Fatalf("failed test validation response is nil")
 	}
-	if vRes.Db != 11 {
-		t.Fatalf("validation failed expected: %d, result:%d", 11, vRes.Db)
+	if vRes.Pool != 11 {
+		t.Fatalf("validation failed expected: %d, result:%d", 11, vRes.Pool)
 	}
 
 }
@@ -173,6 +180,8 @@ func TestWorkerEndpoint_UpdateDb(t *testing.T) {
 	defer cancel()
 	defer peer.Close()
 
+	peer.DataPool.CreateNewDataPool(testUserId)
+
 	conn, err := grpc.Dial(peer.ServerConfig.Addr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
@@ -182,7 +191,7 @@ func TestWorkerEndpoint_UpdateDb(t *testing.T) {
 	ctxClient, cancelClient := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelClient()
 
-	dbUpdate, err := client.UpdateDatabase(ctxClient, &pb.DatabaseUpdate{Userid: "client0", Db: 6})
+	dbUpdate, err := client.UpdateDatapool(ctxClient, &pb.DatapoolUpdate{Userid: testUserId, Pool: 6})
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
 	}

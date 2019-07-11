@@ -125,7 +125,7 @@ func (m *ValidatableCode) GetAdd() int32 {
 }
 
 type ValidationResult struct {
-	Db                   int32    `protobuf:"varint,1,opt,name=db,proto3" json:"db,omitempty"`
+	Pool                 int32    `protobuf:"varint,1,opt,name=pool,proto3" json:"pool,omitempty"`
 	Reject               bool     `protobuf:"varint,2,opt,name=reject,proto3" json:"reject,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -157,9 +157,9 @@ func (m *ValidationResult) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ValidationResult proto.InternalMessageInfo
 
-func (m *ValidationResult) GetDb() int32 {
+func (m *ValidationResult) GetPool() int32 {
 	if m != nil {
-		return m.Db
+		return m.Pool
 	}
 	return 0
 }
@@ -171,49 +171,49 @@ func (m *ValidationResult) GetReject() bool {
 	return false
 }
 
-type DatabaseUpdate struct {
+type DatapoolUpdate struct {
 	Userid               string   `protobuf:"bytes,1,opt,name=userid,proto3" json:"userid,omitempty"`
-	Db                   int32    `protobuf:"varint,2,opt,name=db,proto3" json:"db,omitempty"`
+	Pool                 int32    `protobuf:"varint,2,opt,name=pool,proto3" json:"pool,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *DatabaseUpdate) Reset()         { *m = DatabaseUpdate{} }
-func (m *DatabaseUpdate) String() string { return proto.CompactTextString(m) }
-func (*DatabaseUpdate) ProtoMessage()    {}
-func (*DatabaseUpdate) Descriptor() ([]byte, []int) {
+func (m *DatapoolUpdate) Reset()         { *m = DatapoolUpdate{} }
+func (m *DatapoolUpdate) String() string { return proto.CompactTextString(m) }
+func (*DatapoolUpdate) ProtoMessage()    {}
+func (*DatapoolUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e4ff6184b07e587a, []int{3}
 }
 
-func (m *DatabaseUpdate) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_DatabaseUpdate.Unmarshal(m, b)
+func (m *DatapoolUpdate) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DatapoolUpdate.Unmarshal(m, b)
 }
-func (m *DatabaseUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_DatabaseUpdate.Marshal(b, m, deterministic)
+func (m *DatapoolUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DatapoolUpdate.Marshal(b, m, deterministic)
 }
-func (m *DatabaseUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DatabaseUpdate.Merge(m, src)
+func (m *DatapoolUpdate) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DatapoolUpdate.Merge(m, src)
 }
-func (m *DatabaseUpdate) XXX_Size() int {
-	return xxx_messageInfo_DatabaseUpdate.Size(m)
+func (m *DatapoolUpdate) XXX_Size() int {
+	return xxx_messageInfo_DatapoolUpdate.Size(m)
 }
-func (m *DatabaseUpdate) XXX_DiscardUnknown() {
-	xxx_messageInfo_DatabaseUpdate.DiscardUnknown(m)
+func (m *DatapoolUpdate) XXX_DiscardUnknown() {
+	xxx_messageInfo_DatapoolUpdate.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DatabaseUpdate proto.InternalMessageInfo
+var xxx_messageInfo_DatapoolUpdate proto.InternalMessageInfo
 
-func (m *DatabaseUpdate) GetUserid() string {
+func (m *DatapoolUpdate) GetUserid() string {
 	if m != nil {
 		return m.Userid
 	}
 	return ""
 }
 
-func (m *DatabaseUpdate) GetDb() int32 {
+func (m *DatapoolUpdate) GetPool() int32 {
 	if m != nil {
-		return m.Db
+		return m.Pool
 	}
 	return 0
 }
@@ -249,37 +249,119 @@ func (m *UpdateResult) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_UpdateResult proto.InternalMessageInfo
 
+type DatapoolInfo struct {
+	Userid               string   `protobuf:"bytes,1,opt,name=userid,proto3" json:"userid,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *DatapoolInfo) Reset()         { *m = DatapoolInfo{} }
+func (m *DatapoolInfo) String() string { return proto.CompactTextString(m) }
+func (*DatapoolInfo) ProtoMessage()    {}
+func (*DatapoolInfo) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e4ff6184b07e587a, []int{5}
+}
+
+func (m *DatapoolInfo) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DatapoolInfo.Unmarshal(m, b)
+}
+func (m *DatapoolInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DatapoolInfo.Marshal(b, m, deterministic)
+}
+func (m *DatapoolInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DatapoolInfo.Merge(m, src)
+}
+func (m *DatapoolInfo) XXX_Size() int {
+	return xxx_messageInfo_DatapoolInfo.Size(m)
+}
+func (m *DatapoolInfo) XXX_DiscardUnknown() {
+	xxx_messageInfo_DatapoolInfo.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DatapoolInfo proto.InternalMessageInfo
+
+func (m *DatapoolInfo) GetUserid() string {
+	if m != nil {
+		return m.Userid
+	}
+	return ""
+}
+
+type CreateDatapoolResult struct {
+	Pool                 int32    `protobuf:"varint,1,opt,name=pool,proto3" json:"pool,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CreateDatapoolResult) Reset()         { *m = CreateDatapoolResult{} }
+func (m *CreateDatapoolResult) String() string { return proto.CompactTextString(m) }
+func (*CreateDatapoolResult) ProtoMessage()    {}
+func (*CreateDatapoolResult) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e4ff6184b07e587a, []int{6}
+}
+
+func (m *CreateDatapoolResult) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CreateDatapoolResult.Unmarshal(m, b)
+}
+func (m *CreateDatapoolResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CreateDatapoolResult.Marshal(b, m, deterministic)
+}
+func (m *CreateDatapoolResult) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CreateDatapoolResult.Merge(m, src)
+}
+func (m *CreateDatapoolResult) XXX_Size() int {
+	return xxx_messageInfo_CreateDatapoolResult.Size(m)
+}
+func (m *CreateDatapoolResult) XXX_DiscardUnknown() {
+	xxx_messageInfo_CreateDatapoolResult.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CreateDatapoolResult proto.InternalMessageInfo
+
+func (m *CreateDatapoolResult) GetPool() int32 {
+	if m != nil {
+		return m.Pool
+	}
+	return 0
+}
+
 func init() {
 	proto.RegisterType((*ValidatableCodeRequest)(nil), "pb.ValidatableCodeRequest")
 	proto.RegisterType((*ValidatableCode)(nil), "pb.ValidatableCode")
 	proto.RegisterType((*ValidationResult)(nil), "pb.ValidationResult")
-	proto.RegisterType((*DatabaseUpdate)(nil), "pb.DatabaseUpdate")
+	proto.RegisterType((*DatapoolUpdate)(nil), "pb.DatapoolUpdate")
 	proto.RegisterType((*UpdateResult)(nil), "pb.UpdateResult")
+	proto.RegisterType((*DatapoolInfo)(nil), "pb.DatapoolInfo")
+	proto.RegisterType((*CreateDatapoolResult)(nil), "pb.CreateDatapoolResult")
 }
 
 func init() { proto.RegisterFile("worker.proto", fileDescriptor_e4ff6184b07e587a) }
 
 var fileDescriptor_e4ff6184b07e587a = []byte{
-	// 289 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x51, 0x41, 0x4b, 0xf3, 0x40,
-	0x10, 0x4d, 0xb6, 0x5f, 0x43, 0xbf, 0xa1, 0xa4, 0x61, 0x94, 0x12, 0x72, 0x2a, 0x7b, 0xea, 0x29,
-	0x07, 0x3d, 0x58, 0x3c, 0x78, 0x51, 0xe8, 0x51, 0x58, 0x50, 0x6f, 0xc2, 0xae, 0x3b, 0x48, 0x34,
-	0x98, 0xb8, 0xd9, 0xe0, 0x8f, 0xf4, 0x4f, 0xc9, 0x6e, 0x92, 0x36, 0x0d, 0xbd, 0xcd, 0x9b, 0xdd,
-	0xf7, 0xe6, 0xbd, 0x19, 0x58, 0xfe, 0x54, 0xe6, 0x93, 0x4c, 0x5e, 0x9b, 0xca, 0x56, 0xc8, 0x6a,
-	0xc5, 0x5f, 0x61, 0xfd, 0x2c, 0xcb, 0x42, 0x4b, 0x2b, 0x55, 0x49, 0xf7, 0x95, 0x26, 0x41, 0xdf,
-	0x2d, 0x35, 0x16, 0x33, 0x58, 0x28, 0x53, 0xe8, 0x77, 0x2a, 0x74, 0x1a, 0x6e, 0xc2, 0xed, 0x7f,
-	0x71, 0xc0, 0xb8, 0x86, 0xa8, 0x6d, 0xc8, 0x14, 0x3a, 0x65, 0xfe, 0xa5, 0x47, 0x98, 0xc0, 0x4c,
-	0x6a, 0x9d, 0xce, 0x36, 0xe1, 0x76, 0x2e, 0x5c, 0xc9, 0x6f, 0x60, 0x35, 0xd1, 0x47, 0x84, 0x7f,
-	0x0e, 0x7a, 0xd1, 0xb9, 0xf0, 0xf5, 0x40, 0x64, 0x47, 0xe2, 0x2d, 0x24, 0x3d, 0xb1, 0xa8, 0xbe,
-	0x04, 0x35, 0x6d, 0x69, 0x31, 0x06, 0xa6, 0x55, 0xcf, 0x63, 0x5a, 0x39, 0x1b, 0x86, 0x3e, 0xe8,
-	0xcd, 0x7a, 0xe2, 0x42, 0xf4, 0x88, 0xef, 0x20, 0x7e, 0x70, 0x03, 0x65, 0x43, 0x4f, 0xb5, 0x96,
-	0x96, 0x46, 0x86, 0xc3, 0x13, 0xc3, 0x9d, 0x22, 0x1b, 0x14, 0x79, 0x0c, 0xcb, 0x8e, 0xd1, 0x4d,
-	0xbc, 0xfa, 0x0d, 0x21, 0x7a, 0xf1, 0x3b, 0xc3, 0x3b, 0x58, 0x3d, 0x1a, 0x4d, 0xe6, 0xe8, 0x0a,
-	0x2f, 0xf2, 0x5a, 0xe5, 0x93, 0x78, 0xd9, 0xe5, 0xa8, 0x79, 0xb0, 0xce, 0x03, 0xdc, 0x03, 0xee,
-	0xc9, 0x4e, 0x97, 0x91, 0x9d, 0x91, 0xe8, 0x2f, 0x90, 0x9d, 0x93, 0xe7, 0x01, 0xee, 0x20, 0xee,
-	0x3c, 0x0e, 0x19, 0x11, 0xdd, 0xc7, 0xd3, 0xc4, 0x59, 0xe2, 0x7a, 0xe3, 0x2c, 0x3c, 0x50, 0x91,
-	0xbf, 0xfb, 0xf5, 0x5f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x9c, 0x1c, 0xdb, 0x9b, 0x07, 0x02, 0x00,
-	0x00,
+	// 335 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x92, 0x4f, 0x4b, 0xc3, 0x40,
+	0x10, 0xc5, 0x93, 0xd4, 0x96, 0x3a, 0x94, 0x36, 0x8e, 0xa5, 0x84, 0x9c, 0xca, 0x1e, 0xa4, 0x78,
+	0xe8, 0x41, 0x0f, 0x7a, 0x90, 0x82, 0x54, 0x28, 0x5e, 0x14, 0x16, 0xd4, 0x9b, 0xb0, 0x71, 0x47,
+	0x89, 0x86, 0x6e, 0xdc, 0x6e, 0xe9, 0xb7, 0xf0, 0x33, 0xcb, 0x6e, 0xb2, 0xfd, 0x47, 0x7b, 0x9b,
+	0x99, 0xce, 0xef, 0xf5, 0xcd, 0xdb, 0x40, 0x67, 0xa5, 0xf4, 0x0f, 0xe9, 0x71, 0xa9, 0x95, 0x51,
+	0x18, 0x95, 0x19, 0x7b, 0x87, 0xc1, 0xab, 0x28, 0x72, 0x29, 0x8c, 0xc8, 0x0a, 0x9a, 0x2a, 0x49,
+	0x9c, 0x7e, 0x97, 0xb4, 0x30, 0x98, 0x42, 0x3b, 0xd3, 0xb9, 0xfc, 0xa2, 0x5c, 0x26, 0xe1, 0x30,
+	0x1c, 0x9d, 0xf2, 0x75, 0x8f, 0x03, 0x68, 0x2d, 0x17, 0xa4, 0x73, 0x99, 0x44, 0xee, 0x97, 0xba,
+	0xc3, 0x18, 0x1a, 0x42, 0xca, 0xa4, 0x31, 0x0c, 0x47, 0x4d, 0x6e, 0x4b, 0x76, 0x03, 0xbd, 0x3d,
+	0x7d, 0x44, 0x38, 0xb1, 0xad, 0x13, 0x6d, 0x72, 0x57, 0x7b, 0x30, 0xda, 0x80, 0x13, 0x88, 0x6b,
+	0x30, 0x57, 0x73, 0x4e, 0x8b, 0x65, 0x61, 0x2c, 0x59, 0x2a, 0x55, 0x78, 0xd2, 0xd6, 0xd6, 0x8a,
+	0xa6, 0x6f, 0xfa, 0x30, 0x0e, 0x6e, 0xf3, 0xba, 0x63, 0x77, 0xd0, 0x7d, 0x10, 0x46, 0xd8, 0x9d,
+	0x97, 0x52, 0x0a, 0x43, 0x5b, 0xa6, 0xc3, 0x1d, 0xd3, 0x5e, 0x35, 0xda, 0xa8, 0xb2, 0x2e, 0x74,
+	0x2a, 0xaa, 0xfa, 0x67, 0x76, 0x01, 0x1d, 0xaf, 0xf6, 0x38, 0xff, 0x54, 0xc7, 0xb4, 0xd8, 0x25,
+	0xf4, 0xa7, 0x9a, 0x84, 0x21, 0xbf, 0x7d, 0xdc, 0xf9, 0xd5, 0x5f, 0x04, 0xad, 0x37, 0xf7, 0x1e,
+	0x38, 0x81, 0xde, 0xb3, 0x96, 0xa4, 0x37, 0x17, 0xe3, 0xf9, 0xb8, 0xcc, 0xc6, 0x7b, 0xd1, 0xa5,
+	0xfd, 0xad, 0xe1, 0x3a, 0x16, 0x16, 0xe0, 0x0c, 0x70, 0x46, 0x66, 0x3f, 0xe8, 0xf4, 0x80, 0x44,
+	0xfd, 0xba, 0xe9, 0x21, 0x79, 0x16, 0xe0, 0x2d, 0x74, 0xab, 0xbb, 0xbd, 0x7f, 0x44, 0xbb, 0xb8,
+	0x9b, 0x64, 0x1a, 0xdb, 0xd9, 0x4e, 0x3e, 0x01, 0xde, 0xc3, 0x59, 0x75, 0xf9, 0x13, 0xad, 0xd6,
+	0x70, 0xbc, 0x0d, 0xdb, 0xe0, 0xd2, 0xc4, 0x4e, 0x0e, 0x45, 0xc4, 0x82, 0xac, 0xe5, 0x3e, 0xcb,
+	0xeb, 0xff, 0x00, 0x00, 0x00, 0xff, 0xff, 0x9a, 0xb4, 0xb2, 0xc9, 0xa6, 0x02, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -296,7 +378,8 @@ const _ = grpc.SupportPackageIsVersion4
 type WorkerClient interface {
 	OrderValidation(ctx context.Context, in *ValidatableCode, opts ...grpc.CallOption) (*ValidationResult, error)
 	GetValidatableCode(ctx context.Context, in *ValidatableCodeRequest, opts ...grpc.CallOption) (*ValidatableCode, error)
-	UpdateDatabase(ctx context.Context, in *DatabaseUpdate, opts ...grpc.CallOption) (*UpdateResult, error)
+	UpdateDatapool(ctx context.Context, in *DatapoolUpdate, opts ...grpc.CallOption) (*UpdateResult, error)
+	CreateNewDatapool(ctx context.Context, in *DatapoolInfo, opts ...grpc.CallOption) (*CreateDatapoolResult, error)
 }
 
 type workerClient struct {
@@ -325,9 +408,18 @@ func (c *workerClient) GetValidatableCode(ctx context.Context, in *ValidatableCo
 	return out, nil
 }
 
-func (c *workerClient) UpdateDatabase(ctx context.Context, in *DatabaseUpdate, opts ...grpc.CallOption) (*UpdateResult, error) {
+func (c *workerClient) UpdateDatapool(ctx context.Context, in *DatapoolUpdate, opts ...grpc.CallOption) (*UpdateResult, error) {
 	out := new(UpdateResult)
-	err := c.cc.Invoke(ctx, "/pb.Worker/UpdateDatabase", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Worker/UpdateDatapool", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *workerClient) CreateNewDatapool(ctx context.Context, in *DatapoolInfo, opts ...grpc.CallOption) (*CreateDatapoolResult, error) {
+	out := new(CreateDatapoolResult)
+	err := c.cc.Invoke(ctx, "/pb.Worker/CreateNewDatapool", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +430,8 @@ func (c *workerClient) UpdateDatabase(ctx context.Context, in *DatabaseUpdate, o
 type WorkerServer interface {
 	OrderValidation(context.Context, *ValidatableCode) (*ValidationResult, error)
 	GetValidatableCode(context.Context, *ValidatableCodeRequest) (*ValidatableCode, error)
-	UpdateDatabase(context.Context, *DatabaseUpdate) (*UpdateResult, error)
+	UpdateDatapool(context.Context, *DatapoolUpdate) (*UpdateResult, error)
+	CreateNewDatapool(context.Context, *DatapoolInfo) (*CreateDatapoolResult, error)
 }
 
 func RegisterWorkerServer(s *grpc.Server, srv WorkerServer) {
@@ -381,20 +474,38 @@ func _Worker_GetValidatableCode_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Worker_UpdateDatabase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DatabaseUpdate)
+func _Worker_UpdateDatapool_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DatapoolUpdate)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(WorkerServer).UpdateDatabase(ctx, in)
+		return srv.(WorkerServer).UpdateDatapool(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.Worker/UpdateDatabase",
+		FullMethod: "/pb.Worker/UpdateDatapool",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerServer).UpdateDatabase(ctx, req.(*DatabaseUpdate))
+		return srv.(WorkerServer).UpdateDatapool(ctx, req.(*DatapoolUpdate))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Worker_CreateNewDatapool_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DatapoolInfo)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkerServer).CreateNewDatapool(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/pb.Worker/CreateNewDatapool",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkerServer).CreateNewDatapool(ctx, req.(*DatapoolInfo))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -412,8 +523,12 @@ var _Worker_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Worker_GetValidatableCode_Handler,
 		},
 		{
-			MethodName: "UpdateDatabase",
-			Handler:    _Worker_UpdateDatabase_Handler,
+			MethodName: "UpdateDatapool",
+			Handler:    _Worker_UpdateDatapool_Handler,
+		},
+		{
+			MethodName: "CreateNewDatapool",
+			Handler:    _Worker_CreateNewDatapool_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

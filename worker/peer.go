@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	config "yox2yox/antone/worker/config"
+	"yox2yox/antone/worker/datapool"
 	pb "yox2yox/antone/worker/pb"
 	"yox2yox/antone/worker/worker"
 
@@ -16,6 +17,7 @@ type Peer struct {
 	ServerConfig *config.ServerConfig
 	Listener     *net.Listener
 	GrpcServer   *grpc.Server
+	DataPool     *datapool.Service
 }
 
 func New(config *config.ServerConfig, debug bool) (*Peer, error) {
@@ -35,8 +37,12 @@ func New(config *config.ServerConfig, debug bool) (*Peer, error) {
 		peer.GrpcServer = grpc.NewServer(opts...)
 	}
 
+	{ //setup datapool
+		peer.DataPool = datapool.NewService()
+	}
+
 	{ //setup worker
-		pb.RegisterWorkerServer(peer.GrpcServer, worker.NewEndpoint())
+		pb.RegisterWorkerServer(peer.GrpcServer, worker.NewEndpoint(peer.DataPool))
 	}
 
 	return peer, nil
