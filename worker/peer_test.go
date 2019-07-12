@@ -90,14 +90,14 @@ func TestPeer_RunAndClose(t *testing.T) {
 func TestWorkerEndpoint_ResponseValidatableCode(t *testing.T) {
 	peer, err := InitPeer()
 	if err != nil {
-		t.Fatalf("failed initializing peer %#v", err)
+		t.Fatalf("failed to initialize peer %#v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	go func() {
 		err := PeerRun(peer, ctx)
 		if err != nil {
-			t.Fatalf("failed closing peer %#v", err)
+			t.Fatalf("failed to close peer %#v", err)
 		}
 	}()
 	defer cancel()
@@ -105,7 +105,7 @@ func TestWorkerEndpoint_ResponseValidatableCode(t *testing.T) {
 
 	conn, err := grpc.Dial(peer.ServerConfig.Addr, grpc.WithInsecure())
 	if err != nil {
-		t.Fatalf("failed test %#v", err)
+		t.Fatalf("failed to get connection %#v", err)
 	}
 	defer conn.Close()
 	client := pb.NewWorkerClient(conn)

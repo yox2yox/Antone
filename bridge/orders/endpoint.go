@@ -28,7 +28,7 @@ func NewEndpoint(accounting *accounting.Service) *Endpoint {
 
 func (e *Endpoint) RequestValidatableCode(ctx context.Context, vCodeRequest *pb.ValidatableCodeRequest) (*pb.ValidatableCode, error) {
 	if e.Accounting.GetWorkersCount() < e.PickNum {
-		return nil, errors.New("There is not enough Wokers")
+		return nil, errors.New("There are not enough Wokers")
 	}
 	rand.Seed(time.Now().UnixNano())
 
