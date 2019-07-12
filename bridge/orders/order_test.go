@@ -111,7 +111,7 @@ func TestValidateCodeSuccess(t *testing.T) {
 	}
 
 	orderService := NewService(accounting, true)
-	err = orderService.ValidateCode(workers[0].Id, &pb.ValidatableCode{Data: 10, Add: 0})
+	err = orderService.ValidateCode(1, workers[0].Id, &pb.ValidatableCode{Data: 10, Add: 0})
 	if err != nil {
 		t.Fatalf("failed to registar validate code %#v", err)
 	}

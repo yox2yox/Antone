@@ -50,9 +50,9 @@ func (s *Service) GetOrders() []*Order {
 	return s.WaitList
 }
 
-func (s *Service) ValidateCode(holderId string, vCode *pb.ValidatableCode) error {
+func (s *Service) ValidateCode(picknum int, holderId string, vCode *pb.ValidatableCode) error {
 
-	pickedWorkers, err := s.Accounting.SelectValidationWorkers(1)
+	pickedWorkers, err := s.Accounting.SelectValidationWorkers(picknum)
 	if err != nil {
 		return err
 	}
