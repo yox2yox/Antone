@@ -15,12 +15,14 @@ type Worker struct {
 }
 
 type Endpoint struct {
+	Orders     *Service
 	Accounting *accounting.Service
 	PickNum    int
 }
 
-func NewEndpoint(accounting *accounting.Service) *Endpoint {
+func NewEndpoint(orders *Service, accounting *accounting.Service) *Endpoint {
 	return &Endpoint{
+		Orders:     orders,
 		Accounting: accounting,
 		PickNum:    1,
 	}

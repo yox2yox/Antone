@@ -52,7 +52,8 @@ func UpServer() (*grpc.Server, net.Listener, error) {
 func TestCreateOrderSuccess(t *testing.T) {
 	grpcServer, listen, err := UpServer()
 	accounting := accounting.NewService(true)
-	endpoint := NewEndpoint(accounting)
+	orders := NewService(accounting, true)
+	endpoint := NewEndpoint(orders, accounting)
 	go func() {
 		pb.RegisterOrdersServer(grpcServer, endpoint)
 		grpcServer.Serve(listen)

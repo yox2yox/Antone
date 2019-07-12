@@ -48,7 +48,7 @@ func New(config *config.ServerConfig, debug bool) (*Peer, error) {
 
 	{ //setup orders
 		peer.Orders = orders.NewService(peer.Accounting, debug)
-		pb.RegisterOrdersServer(peer.GrpcServer, orders.NewEndpoint(peer.Accounting))
+		pb.RegisterOrdersServer(peer.GrpcServer, orders.NewEndpoint(peer.Orders, peer.Accounting))
 	}
 
 	return peer, nil
