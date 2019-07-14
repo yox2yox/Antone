@@ -104,11 +104,10 @@ func TestValidateCodeSuccess(t *testing.T) {
 	if len(workers) <= 0 || workers[0] == nil {
 		t.Fatalf("selected worker's data is broken")
 	}
-	for _, worker := range workers {
-		err = accounting.RegistarDBHolder(testClientId, worker.Id)
-		if err != nil {
-			t.Fatalf("failed to registar holder %#v", err)
-		}
+
+	_, err = accounting.RegistarNewDatapoolHolders(testClientId, len(workers))
+	if err != nil {
+		t.Fatalf("failed to registar holder %#v", err)
 	}
 
 	orderService := NewService(accounting, true)

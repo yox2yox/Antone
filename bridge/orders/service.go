@@ -87,3 +87,12 @@ func (s *Service) ValidateCode(picknum int, holderId string, vCode *pb.Validatab
 	}
 	return nil
 }
+
+/*
+func (s *Service) GetValidatableCodeFromRemote(userId string) (*pb.ValidatableCode, error) {
+	pickedHolder, err := s.Accounting.SelectDataPoolHolder(userId)
+	if err != nil {
+
+	}
+}
+*/

@@ -1,9 +1,14 @@
 package accounting
 
 import (
+	"context"
 	"errors"
 	"math/rand"
+	"sync"
 	"time"
+	workerpb "yox2yox/antone/worker/pb"
+
+	"google.golang.org/grpc"
 )
 
 type Client struct {
@@ -22,22 +27,24 @@ type Service struct {
 	Clients                     map[string]*Client
 	WorkersId                   []string
 	Holders                     map[string][]string
-	WithoutCommunicationForTest bool
+	WithoutConnectRemoteForTest bool
 }
 
 var (
-	ErrIDNotExist          = errors.New("this id doesn't exist")
-	ErrIDAlreadyExists     = errors.New("this id already exsits")
-	ErrWorkersAreNotEnough = errors.New("There are not enough workers")
+	ErrIDNotExist             = errors.New("this id doesn't exist")
+	ErrIDAlreadyExists        = errors.New("this id already exsits")
+	ErrWorkersAreNotEnough    = errors.New("There are not enough workers")
+	ErrDataPoolHolderNotExist = errors.New("this user's datapool doesn't exist")
+	ErrDataPoolAlreadyExists  = errors.New("this user's datapool already exists")
 )
 
-func NewService(withoutCommunicationForTest bool) *Service {
+func NewService(withoutConnectRemoteForTest bool) *Service {
 	return &Service{
 		Workers:                     map[string]*Worker{},
 		Clients:                     map[string]*Client{},
 		WorkersId:                   []string{},
 		Holders:                     map[string][]string{},
-		WithoutCommunicationForTest: withoutCommunicationForTest,
+		WithoutConnectRemoteForTest: withoutConnectRemoteForTest,
 	}
 }
 
@@ -62,39 +69,75 @@ func (s *Service) SelectValidationWorkers(num int) ([]*Worker, error) {
 }
 
 //userIdのデータを保有しているHolderの中から一台選択して返す
-func (s *Service) SelectDBHolder(userId string) *Worker {
+func (s *Service) SelectDataPoolHolder(userId string) (*Worker, error) {
 	rand.Seed(time.Now().UnixNano())
+	_, exist := s.Holders[userId]
+	if exist == false {
+		return nil, ErrDataPoolHolderNotExist
+	}
 	holderid := s.Holders[userId][rand.Intn(len(s.Holders))]
-	return s.Workers[holderid]
+	return s.Workers[holderid], nil
 }
 
-//新規holderを登録する
-func (s *Service) RegistarDBHolder(userId string, workerid string) error {
-	rand.Seed(time.Now().UnixNano())
-	_, exist := s.Workers[workerid]
-	if exist == false {
-		return ErrIDNotExist
+//新規データプールを作成しHolderを登録する
+func (s *Service) RegistarNewDatapoolHolders(userId string, num int) ([]*Worker, error) {
+	if len(s.Workers) < num {
+		return nil, ErrWorkersAreNotEnough
 	}
-	for _, holder := range s.Holders[userId] {
-		if holder == workerid {
-			return ErrIDAlreadyExists
+
+	rand.Seed(time.Now().UnixNano())
+
+	_, exist := s.Holders[userId]
+	if exist {
+		return nil, ErrDataPoolAlreadyExists
+	}
+	s.Holders[userId] = []string{}
+
+	workers, err := s.SelectValidationWorkers(num)
+	if err != nil {
+		return nil, err
+	}
+
+	wg := sync.WaitGroup{}
+
+	for _, worker := range workers {
+		if !s.WithoutConnectRemoteForTest {
+			//RemoteワーカにCreateNewDatapoolリクエスト送信
+			wg.Add(1)
+			go func(target *Worker) {
+				defer wg.Done()
+				conn, err := grpc.Dial(target.Addr, grpc.WithInsecure())
+				if err != nil {
+					return
+				}
+				workerClient := workerpb.NewWorkerClient(conn)
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+
+				datapoolInfo := &workerpb.DatapoolInfo{Userid: userId}
+				_, err = workerClient.CreateNewDatapool(ctx, datapoolInfo)
+				if err != nil {
+					return
+				}
+				s.Holders[userId] = append(s.Holders[userId], target.Id)
+			}(worker)
+		} else {
+			s.Holders[userId] = append(s.Holders[userId], worker.Id)
 		}
 	}
 
-	//Remoteワーカに新規DB登録リクエスト送信
-	//TODO:実装
-	/*if !s.WithoutCommunicationForTest {
-		conn, err := grpc.Dial(remote.Addr, grpc.WithInsecure())
-		workerClient := workerpb.NewWorkerClient(conn)
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
+	if !s.WithoutConnectRemoteForTest {
+		wg.Wait()
+	}
+	holders := []*Worker{}
+	for _, holder := range s.Holders[userId] {
+		worker, exist := s.Workers[holder]
+		if exist {
+			holders = append(holders, worker)
+		}
+	}
 
-		vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add}
-		validationResult, err := workerClient.OrderValidation(ctx, vCodeWorker)
-	}*/
-
-	s.Holders[userId] = append(s.Holders[userId], workerid)
-	return nil
+	return holders, nil
 }
 
 //Workerアカウントを新規作成

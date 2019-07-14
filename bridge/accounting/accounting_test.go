@@ -1,7 +1,8 @@
-package accounting
+package accounting_test
 
 import (
 	"testing"
+	"yox2yox/antone/bridge/accounting"
 )
 
 var (
@@ -10,11 +11,12 @@ var (
 		"worker1",
 	}
 	testWorkerAddr = "addr"
+	testUserId     = "client0"
 )
 
 //WorkersCountが正しく機能するか
 func TestAccountingService_WorkersCount(t *testing.T) {
-	accounting := NewService(true)
+	accounting := accounting.NewService(true)
 	_, err := accounting.CreateNewWorker(testWorkersId[0], testWorkerAddr)
 	if err != nil {
 		t.Fatalf("failed to create worker %#v", err)
@@ -26,7 +28,7 @@ func TestAccountingService_WorkersCount(t *testing.T) {
 }
 
 func TestAccountingService_SelectValidationWorkers(t *testing.T) {
-	accounting := NewService(true)
+	accounting := accounting.NewService(true)
 
 	_, err := accounting.CreateNewWorker(testWorkersId[0], testWorkerAddr)
 	if err != nil {
@@ -67,10 +69,10 @@ func TestAccountingService_SelectValidationWorkers(t *testing.T) {
 }
 
 func TestAccountingService_SelectValidationWorkersFail(t *testing.T) {
-	accountingS := NewService(true)
+	accountingS := accounting.NewService(true)
 
 	_, err := accountingS.SelectValidationWorkers(1)
-	if err != ErrWorkersAreNotEnough {
+	if err != accounting.ErrWorkersAreNotEnough {
 		t.Fatalf("failed to get NotEnough error%#v", err)
 	}
 
@@ -80,18 +82,60 @@ func TestAccountingService_SelectValidationWorkersFail(t *testing.T) {
 	}
 
 	_, err = accountingS.SelectValidationWorkers(2)
-	if err != ErrWorkersAreNotEnough {
+	if err != accounting.ErrWorkersAreNotEnough {
 		t.Fatalf("failed to get NotEnough error%#v", err)
 	}
 
 }
 
-func TestAccountingService_SelectDBHolders(t *testing.T) {
-	//TODO: Test Get DB Holder
+func Test_RegistarNewDataPoolHolders(t *testing.T) {
+
+	testHoldersNum := 1
+
+	accountingS := accounting.NewService(true)
+	_, err := accountingS.RegistarNewDatapoolHolders(testUserId, testHoldersNum)
+	if err != accounting.ErrWorkersAreNotEnough {
+		t.Fatalf("want has error %#v, but %#v", accounting.ErrWorkersAreNotEnough, err)
+	}
+
+	_, err = accountingS.CreateNewWorker(testWorkersId[0], testWorkerAddr)
+	_, err = accountingS.RegistarNewDatapoolHolders(testUserId, testHoldersNum)
+	if err != nil {
+		t.Fatalf("want no error, but has error %#v", err)
+	}
+	_, err = accountingS.RegistarNewDatapoolHolders(testUserId, testHoldersNum)
+	if err != accounting.ErrDataPoolAlreadyExists {
+		t.Fatalf("want has error %#v, but %#v", accounting.ErrDataPoolAlreadyExists, err)
+	}
+
+}
+
+func TestAccountingService_SelectDataPoolHolders(t *testing.T) {
+	accountingS := accounting.NewService(true)
+
+	holder, err := accountingS.SelectDataPoolHolder(testUserId)
+	if err != accounting.ErrDataPoolHolderNotExist {
+		t.Fatalf("want has error %#v, but %#v", accounting.ErrDataPoolHolderNotExist, err)
+	}
+
+	_, err = accountingS.CreateNewWorker(testWorkersId[0], testWorkerAddr)
+	_, err = accountingS.RegistarNewDatapoolHolders(testUserId, 1)
+	if err != nil {
+		t.Fatalf("want no error, but has error %#v", err)
+	}
+
+	holder, err = accountingS.SelectDataPoolHolder(testUserId)
+	if err != nil {
+		t.Fatalf("want no error, but has error %#v", err)
+	}
+	if holder == nil {
+		t.Fatalf("want holder not nil, but nil")
+	}
+
 }
 
 func TestAccountingService_CreateNewWorkerSuccess(t *testing.T) {
-	accounting := NewService(true)
+	accounting := accounting.NewService(true)
 	worker, err := accounting.CreateNewWorker("worker:hoge", "hoge")
 	if err != nil {
 		t.Fatalf("failed to create worker%#v", err)
@@ -102,22 +146,22 @@ func TestAccountingService_CreateNewWorkerSuccess(t *testing.T) {
 }
 
 func TestAccountingService_CreateDupulicatedWorkerFail(t *testing.T) {
-	accounting := NewService(true)
-	worker, err := accounting.CreateNewWorker("worker:hoge", "hoge")
+	accountingS := accounting.NewService(true)
+	worker, err := accountingS.CreateNewWorker("worker:hoge", "hoge")
 	if err != nil {
 		t.Fatalf("failed to create worker%#v", err)
 	}
 	if worker == nil {
 		t.Fatalf("created worker is nil")
 	}
-	worker, err = accounting.CreateNewWorker("worker:hoge", "hoge")
-	if err != ErrIDAlreadyExists {
+	worker, err = accountingS.CreateNewWorker("worker:hoge", "hoge")
+	if err != accounting.ErrIDAlreadyExists {
 		t.Fatalf("couldn't get dupulication error %#v", err)
 	}
 }
 
 func TestAccountingService_CreateNewClientSuccess(t *testing.T) {
-	accounting := NewService(true)
+	accounting := accounting.NewService(true)
 	client, err := accounting.CreateNewClient("worker:hoge")
 	if err != nil {
 		t.Fatalf("failed to create worker%#v", err)
@@ -128,16 +172,16 @@ func TestAccountingService_CreateNewClientSuccess(t *testing.T) {
 }
 
 func TestAccountingService_CreateDupulicatedClientFail(t *testing.T) {
-	accounting := NewService(true)
-	client, err := accounting.CreateNewWorker("worker:hoge", "hoge")
+	accountingS := accounting.NewService(true)
+	client, err := accountingS.CreateNewWorker("worker:hoge", "hoge")
 	if err != nil {
 		t.Fatalf("failed to create worker%#v", err)
 	}
 	if client == nil {
 		t.Fatalf("created worker is nil")
 	}
-	client, err = accounting.CreateNewWorker("worker:hoge", "hoge")
-	if err != ErrIDAlreadyExists {
+	client, err = accountingS.CreateNewWorker("worker:hoge", "hoge")
+	if err != accounting.ErrIDAlreadyExists {
 		t.Fatalf("couldn't get dupulication error %#v", err)
 	}
 }
