@@ -23,6 +23,7 @@ type Worker struct {
 }
 
 type Service struct {
+	sync.RWMutex
 	Workers                     map[string]*Worker
 	Clients                     map[string]*Client
 	WorkersId                   []string
@@ -61,7 +62,9 @@ func (s *Service) SelectValidationWorkers(num int) ([]*Worker, error) {
 	rand.Seed(time.Now().UnixNano())
 	picked := []*Worker{}
 	for i := 0; i < num; i++ {
+		s.RLock()
 		pickedId := s.WorkersId[rand.Intn(len(s.Workers))]
+		s.RUnlock()
 		picked = append(picked, s.Workers[pickedId])
 	}
 
@@ -71,27 +74,39 @@ func (s *Service) SelectValidationWorkers(num int) ([]*Worker, error) {
 //userIdのデータを保有しているHolderの中から一台選択して返す
 func (s *Service) SelectDataPoolHolder(userId string) (*Worker, error) {
 	rand.Seed(time.Now().UnixNano())
+	s.RLock()
 	_, exist := s.Holders[userId]
+	s.RUnlock()
 	if exist == false {
 		return nil, ErrDataPoolHolderNotExist
 	}
+	s.RLock()
 	holderid := s.Holders[userId][rand.Intn(len(s.Holders))]
-	return s.Workers[holderid], nil
+	rtnworkers := s.Workers[holderid]
+	s.RUnlock()
+	return rtnworkers, nil
 }
 
 //新規データプールを作成しHolderを登録する
 func (s *Service) RegistarNewDatapoolHolders(userId string, num int) ([]*Worker, error) {
-	if len(s.Workers) < num {
+	s.RLock()
+	lenworkers := len(s.Workers)
+	s.RUnlock()
+	if lenworkers < num {
 		return nil, ErrWorkersAreNotEnough
 	}
 
 	rand.Seed(time.Now().UnixNano())
 
+	s.RLock()
 	_, exist := s.Holders[userId]
+	s.RUnlock()
 	if exist {
 		return nil, ErrDataPoolAlreadyExists
 	}
+	s.Lock()
 	s.Holders[userId] = []string{}
+	s.Unlock()
 
 	workers, err := s.SelectValidationWorkers(num)
 	if err != nil {
@@ -119,10 +134,14 @@ func (s *Service) RegistarNewDatapoolHolders(userId string, num int) ([]*Worker,
 				if err != nil {
 					return
 				}
+				s.Lock()
 				s.Holders[userId] = append(s.Holders[userId], target.Id)
+				s.Unlock()
 			}(worker)
 		} else {
+			s.Lock()
 			s.Holders[userId] = append(s.Holders[userId], worker.Id)
+			s.Unlock()
 		}
 	}
 
@@ -130,7 +149,10 @@ func (s *Service) RegistarNewDatapoolHolders(userId string, num int) ([]*Worker,
 		wg.Wait()
 	}
 	holders := []*Worker{}
-	for _, holder := range s.Holders[userId] {
+	s.RLock()
+	holdersOriginal := s.Holders[userId]
+	s.RUnlock()
+	for _, holder := range holdersOriginal {
 		worker, exist := s.Workers[holder]
 		if exist {
 			holders = append(holders, worker)
@@ -142,29 +164,38 @@ func (s *Service) RegistarNewDatapoolHolders(userId string, num int) ([]*Worker,
 
 //Workerアカウントを新規作成
 func (s *Service) CreateNewWorker(workerId string, Addr string) (*Worker, error) {
+	s.RLock()
 	_, exist := s.Workers[workerId]
+	s.RUnlock()
 	if exist {
 		return nil, ErrIDAlreadyExists
 	}
-	s.Workers[workerId] = &Worker{
+	worker := &Worker{
 		Addr:       Addr,
 		Id:         workerId,
 		Reputation: 0,
 	}
+	s.Lock()
+	s.Workers[workerId] = worker
 	s.WorkersId = append(s.WorkersId, workerId)
-	return s.Workers[workerId], nil
+	s.Unlock()
+	return worker, nil
 }
 
 //Clientの新規アカウントを作成
 func (s *Service) CreateNewClient(userId string) (*Client, error) {
+	s.RLock()
 	_, exist := s.Clients[userId]
+	s.RUnlock()
 	if exist {
 		return nil, ErrIDAlreadyExists
 	}
-
-	s.Clients[userId] = &Client{
+	client := &Client{
 		Id:      userId,
 		Balance: 0,
 	}
-	return s.Clients[userId], nil
+	s.Lock()
+	s.Clients[userId] = client
+	s.Unlock()
+	return client, nil
 }
