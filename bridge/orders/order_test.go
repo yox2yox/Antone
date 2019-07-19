@@ -32,19 +32,6 @@ func UpServer() (*grpc.Server, net.Listener, error) {
 		return nil, nil, err
 	}
 	var opts []grpc.ServerOption
-	/*if tls {
-		if *certFile == "" {
-			*certFile = testdata.Path("server1.pem")
-		}
-		if *keyFile == "" {
-			*keyFile = testdata.Path("server1.key")
-		}
-		creds, err := credentials.NewServerTLSFromFile(*certFile, *keyFile)
-		if err != nil {
-			log.Fatalf("Failed to generate credentials %v", err)
-		}
-		opts = []grpc.ServerOption{grpc.Creds(creds)}
-	}*/
 	grpcServer := grpc.NewServer(opts...)
 	return grpcServer, lis, nil
 }
@@ -111,12 +98,11 @@ func TestValidateCodeSuccess(t *testing.T) {
 	}
 
 	orderService := NewService(accounting, true)
-	err = orderService.ValidateCode(1, workers[0].Id, &pb.ValidatableCode{Data: 10, Add: 0})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err = orderService.ValidateCode(ctx, 1, workers[0].Id, &pb.ValidatableCode{Data: 10, Add: 0})
 	if err != nil {
 		t.Fatalf("failed to registar validate code %#v", err)
-	}
-	waitList := orderService.GetOrders()
-	if len(waitList) <= 0 || len(waitList[0].OrderResults) <= 0 {
-		t.Fatalf("failed to validate order")
 	}
 }
