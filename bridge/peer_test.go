@@ -12,6 +12,7 @@ import (
 )
 
 var (
+	testClientId   = "client0"
 	testWorkerId   = "worker0"
 	testWorkerAddr = "localhost:10000"
 )
@@ -30,7 +31,7 @@ func InitPeer() (*Peer, error) {
 	if err != nil {
 		return nil, err
 	}
-	peer, err := New(config.Server, true)
+	peer, err := New(config, true)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +47,7 @@ func TestPeer_Initialize(t *testing.T) {
 	if peer.GrpcServer == nil {
 		t.Fatalf("failed init peer GrpcServer is nil")
 	}
-	if peer.ServerConfig == nil {
+	if peer.Config.Server == nil {
 		t.Fatalf("failed init peer ServerConfig is nil")
 	}
 	if peer.Listener == nil {
@@ -107,7 +108,12 @@ func TestOrderEndpoint_ResponseValidatableCode(t *testing.T) {
 		t.Fatalf("failed to create worker %#v", err)
 	}
 
-	conn, err := grpc.Dial(peer.ServerConfig.Addr, grpc.WithInsecure())
+	_, err = peer.Accounting.RegistarNewDatapoolHolders(testClientId, 1)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+
+	conn, err := grpc.Dial(peer.Config.Server.Addr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
 	}
@@ -115,7 +121,7 @@ func TestOrderEndpoint_ResponseValidatableCode(t *testing.T) {
 	client := pb.NewOrdersClient(conn)
 	ctxClient, cancelClient := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelClient()
-	vCode, err := client.RequestValidatableCode(ctxClient, &pb.ValidatableCodeRequest{Userid: "0", Add: 10})
+	vCode, err := client.RequestValidatableCode(ctxClient, &pb.ValidatableCodeRequest{Userid: testClientId, Add: 10})
 
 	if err != nil {
 		t.Fatalf("failed test %#v", err)

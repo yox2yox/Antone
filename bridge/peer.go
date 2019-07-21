@@ -15,25 +15,25 @@ import (
 )
 
 type Peer struct {
-	GrpcServer   *grpc.Server
-	ServerConfig *config.ServerConfig
-	Addr         string
-	port         string
-	Listener     *net.Listener
-	Accounting   *accounting.Service
-	Orders       *orders.Service
+	GrpcServer *grpc.Server
+	Config     *config.BridgeConfig
+	Addr       string
+	port       string
+	Listener   *net.Listener
+	Accounting *accounting.Service
+	Orders     *orders.Service
 }
 
-func New(config *config.ServerConfig, debug bool) (*Peer, error) {
+func New(config *config.BridgeConfig, debug bool) (*Peer, error) {
 
 	peer := &Peer{}
 
 	{ //setup config
-		peer.ServerConfig = config
+		peer.Config = config
 	}
 
 	{ //setup Server
-		lis, err := net.Listen("tcp", peer.ServerConfig.Addr)
+		lis, err := net.Listen("tcp", peer.Config.Server.Addr)
 		if err != nil {
 			return nil, err
 		}
@@ -43,7 +43,7 @@ func New(config *config.ServerConfig, debug bool) (*Peer, error) {
 	}
 
 	{ //setup Accounting
-		peer.Accounting = accounting.NewService(false)
+		peer.Accounting = accounting.NewService(debug)
 	}
 
 	{ //setup orders
