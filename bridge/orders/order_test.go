@@ -23,6 +23,12 @@ var (
 		"worker1",
 		"worker2",
 		"worker3",
+		"worker4",
+		"worker5",
+		"worker6",
+		"worker7",
+		"worker8",
+		"worker9",
 	}
 	testWorkerAddr = "addr"
 )
@@ -82,23 +88,16 @@ func TestCreateOrderSuccess(t *testing.T) {
 
 }
 
-func TestValidateCodeSuccess(t *testing.T) {
+func TestValidateCode(t *testing.T) {
 	accounting := accounting.NewService(true)
-
-	_, err := accounting.CreateNewWorker(testWorkersId[0], testWorkerAddr)
-	if err != nil {
-		t.Fatalf("failed to create new worker %#v", err)
+	for _, workerid := range testWorkersId {
+		_, err := accounting.CreateNewWorker(workerid, testWorkerAddr)
+		if err != nil {
+			t.Fatalf("failed to create new worker %#v", err)
+		}
 	}
 
-	workers, err := accounting.SelectValidationWorkers(1)
-	if err != nil {
-		t.Fatalf("failed to select worker %#v", err)
-	}
-	if len(workers) <= 0 || workers[0] == nil {
-		t.Fatalf("selected worker's data is broken")
-	}
-
-	_, err = accounting.RegistarNewDatapoolHolders(testClientId, len(workers))
+	holder, err := accounting.RegistarNewDatapoolHolders(testClientId, 1)
 	if err != nil {
 		t.Fatalf("failed to registar holder %#v", err)
 	}
@@ -107,7 +106,7 @@ func TestValidateCodeSuccess(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	err = orderService.ValidateCode(ctx, 1, workers[0].Id, &pb.ValidatableCode{Data: 10, Add: 0})
+	err = orderService.ValidateCode(ctx, 5, holder[0].Id, &pb.ValidatableCode{Data: 10, Add: 0})
 	if err != nil {
 		t.Fatalf("failed to registar validate code %#v", err)
 	}
@@ -128,7 +127,7 @@ func TestGetValidatableCode(t *testing.T) {
 		t.Fatalf("want no error,but has error %#v", err)
 	}
 	order := NewService(accounting, true)
-	vcode, err := order.GetValidatableCode(testClientId, 1)
+	vcode, _, err := order.GetValidatableCode(testClientId, 1)
 	if err != nil {
 		t.Fatalf("want no error,but has error %#v", err)
 	}
