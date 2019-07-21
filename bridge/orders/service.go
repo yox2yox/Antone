@@ -94,16 +94,16 @@ func (s *Service) getValidatableCodeRemote(holder *accounting.Worker, userId str
 }
 
 //ValidatableCodeを取得する
-func (s *Service) GetValidatableCode(userId string, add int32) (*pb.ValidatableCode, error) {
+func (s *Service) GetValidatableCode(userId string, add int32) (*pb.ValidatableCode, string, error) {
 	holder, err := s.Accounting.SelectDataPoolHolder(userId)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	var vcode *pb.ValidatableCode
 	if !s.WithoutConnectRemoteForTest {
 		vcode, err = s.getValidatableCodeRemote(holder, userId, add)
 		if err != nil {
-			return nil, err
+			return nil, holder.Id, err
 		}
 	} else {
 		vcode = &pb.ValidatableCode{
@@ -111,7 +111,7 @@ func (s *Service) GetValidatableCode(userId string, add int32) (*pb.ValidatableC
 			Add:  add,
 		}
 	}
-	return vcode, nil
+	return vcode, holder.Id, nil
 }
 
 func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.ValidatableCode) *OrderResult {
