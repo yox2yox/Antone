@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 	"testing"
 	"time"
 	"yox2yox/antone/bridge/accounting"
@@ -57,6 +58,11 @@ func TestCreateOrderSuccess(t *testing.T) {
 		}
 	}
 
+	_, err = accounting.RegistarNewDatapoolHolders(testClientId, 1)
+	if err != nil {
+		t.Fatalf("want no error, but has error %#v", err)
+	}
+
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
@@ -65,7 +71,7 @@ func TestCreateOrderSuccess(t *testing.T) {
 	client := pb.NewOrdersClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	orderInfo, err := client.RequestValidatableCode(ctx, &pb.ValidatableCodeRequest{Userid: "0", Add: 10})
+	orderInfo, err := client.RequestValidatableCode(ctx, &pb.ValidatableCodeRequest{Userid: testClientId, Add: 10})
 	t.Logf("%#v aaa", orderInfo)
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
@@ -105,4 +111,44 @@ func TestValidateCodeSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to registar validate code %#v", err)
 	}
+}
+
+func TestGetValidatableCode(t *testing.T) {
+	accounting := accounting.NewService(true)
+	_, err := accounting.CreateNewWorker(testWorkersId[0], testWorkerAddr)
+	if err != nil {
+		t.Fatalf("want no error,but has error %#v", err)
+	}
+	_, err = accounting.CreateNewClient(testClientId)
+	if err != nil {
+		t.Fatalf("want no error,but has error %#v", err)
+	}
+	_, err = accounting.RegistarNewDatapoolHolders(testClientId, 1)
+	if err != nil {
+		t.Fatalf("want no error,but has error %#v", err)
+	}
+	order := NewService(accounting, true)
+	vcode, err := order.GetValidatableCode(testClientId, 1)
+	if err != nil {
+		t.Fatalf("want no error,but has error %#v", err)
+	}
+	if vcode == nil {
+		t.Fatalf("want vcode!=nil,but nil")
+	}
+
+}
+
+func TestServiceRunAndStop(t *testing.T) {
+	accounting := accounting.NewService(true)
+	order := NewService(accounting, true)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		order.Run()
+		wg.Done()
+	}()
+	order.AddValidationRequest(1, testClientId, &pb.ValidatableCode{})
+	time.Sleep(3 * time.Second)
+	order.Stop()
+	wg.Wait()
 }
