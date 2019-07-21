@@ -32,11 +32,12 @@ type Service struct {
 }
 
 var (
-	ErrIDNotExist             = errors.New("this id doesn't exist")
-	ErrIDAlreadyExists        = errors.New("this id already exsits")
-	ErrWorkersAreNotEnough    = errors.New("There are not enough workers")
-	ErrDataPoolHolderNotExist = errors.New("this user's datapool doesn't exist")
-	ErrDataPoolAlreadyExists  = errors.New("this user's datapool already exists")
+	ErrIDNotExist                = errors.New("this id doesn't exist")
+	ErrIDAlreadyExists           = errors.New("this id already exsits")
+	ErrWorkersAreNotEnough       = errors.New("There are not enough workers")
+	ErrDataPoolHolderNotExist    = errors.New("this user's datapool doesn't exist")
+	ErrDataPoolAlreadyExists     = errors.New("this user's datapool already exists")
+	ErrCreateDataPoolNotComplete = errors.New("failed to complete to create datepool")
 )
 
 func NewService(withoutConnectRemoteForTest bool) *Service {
@@ -75,13 +76,13 @@ func (s *Service) SelectValidationWorkers(num int) ([]*Worker, error) {
 func (s *Service) SelectDataPoolHolder(userId string) (*Worker, error) {
 	rand.Seed(time.Now().UnixNano())
 	s.RLock()
-	_, exist := s.Holders[userId]
+	holders, exist := s.Holders[userId]
 	s.RUnlock()
-	if exist == false {
+	if exist == false || len(holders) <= 0 {
 		return nil, ErrDataPoolHolderNotExist
 	}
 	s.RLock()
-	holderid := s.Holders[userId][rand.Intn(len(s.Holders))]
+	holderid := holders[rand.Intn(len(holders))]
 	rtnworkers := s.Workers[holderid]
 	s.RUnlock()
 	return rtnworkers, nil
@@ -152,6 +153,9 @@ func (s *Service) RegistarNewDatapoolHolders(userId string, num int) ([]*Worker,
 	s.RLock()
 	holdersOriginal := s.Holders[userId]
 	s.RUnlock()
+	if len(holdersOriginal) < num {
+		return holders, ErrCreateDataPoolNotComplete
+	}
 	for _, holder := range holdersOriginal {
 		worker, exist := s.Workers[holder]
 		if exist {
