@@ -34,12 +34,25 @@ func (e *Endpoint) RequestValidatableCode(ctx context.Context, vCodeRequest *pb.
 	}
 	rand.Seed(time.Now().UnixNano())
 
-	//Send OrderRequest
+	//ValidatableCode取得
+	vcode, err := e.Orders.GetValidatableCode(vCodeRequest.Userid, vCodeRequest.Add)
+	if err != nil {
+		return nil, err
+	}
 
-	return &pb.ValidatableCode{
-		Data: 3,
-		Add:  vCodeRequest.Add,
-	}, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	holder, err := e.Accounting.SelectDataPoolHolder(vCodeRequest.Userid)
+	if err != nil {
+		return nil, err
+	}
+	//TODO: holder id ->  vcode.id
+	err = e.Orders.ValidateCode(ctx, e.PickNum, holder.Id, vcode)
+	if err != nil {
+		return nil, err
+	}
+
+	return vcode, nil
 
 }
 
