@@ -113,12 +113,12 @@ func TestValidateCode(t *testing.T) {
 
 	repcount := 0
 	for _, workerid := range testWorkersId {
-		rep, err := accounting.GetReputation(workerid)
+		worker, err := accounting.GetWorker(workerid)
 		if err != nil {
 			t.Fatalf("want no error, but has error %#v", err)
 		}
 		//評価値が1になっている台数を数える
-		if rep != 1 {
+		if worker.Reputation != 1 {
 			repcount += 1
 		}
 	}
