@@ -223,3 +223,11 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, errored bool
 	return s.Workers[workerId].Reputation, nil
 
 }
+
+func (s *Service) GetReputation(workerId string) (int, error) {
+	_, exist := s.Workers[workerId]
+	if !exist {
+		return 0, ErrIDNotExist
+	}
+	return s.Workers[workerId].Reputation, nil
+}

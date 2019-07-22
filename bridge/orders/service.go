@@ -286,7 +286,9 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 		case err := <-errChan:
 			return err
 		case <-done:
-			//TODO: 評価値の設定
+			for _, res := range results {
+				s.Accounting.UpdateReputation(res.WorkerId, !res.IsRejected, res.IsError)
+			}
 			return nil
 		}
 	}

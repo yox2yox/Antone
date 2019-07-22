@@ -110,6 +110,22 @@ func TestValidateCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to registar validate code %#v", err)
 	}
+
+	repcount := 0
+	for _, workerid := range testWorkersId {
+		rep, err := accounting.GetReputation(workerid)
+		if err != nil {
+			t.Fatalf("want no error, but has error %#v", err)
+		}
+		//評価値が1になっている台数を数える
+		if rep != 1 {
+			repcount += 1
+		}
+	}
+	if repcount != 5 {
+		t.Fatalf("want repcount=5, but %#v", repcount)
+	}
+
 }
 
 func TestGetValidatableCode(t *testing.T) {
