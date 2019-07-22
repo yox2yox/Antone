@@ -30,35 +30,8 @@ type ValidationResult struct {
 	IsError    bool
 }
 
-// type OrderResult struct {
-// 	Db         int32
-// 	IsRejected bool
-// 	IsError    bool
-// }
-
-// type Order struct {
-// 	HolderId       string
-// 	CreatedTime    time.Time
-// 	WaitingWorkers []string
-// 	OrderResults   map[string]OrderResult
-// }
-
-// func NewOrder(holderId string) *Order {
-// 	return &Order{
-// 		HolderId:       holderId,
-// 		CreatedTime:    time.Now(),
-// 		WaitingWorkers: []string{},
-// 		OrderResults:   map[string]OrderResult{},
-// 	}
-// }
-
-// func (o *Order) AddWorkers(workersId []string) {
-// 	o.WaitingWorkers = append(o.WaitingWorkers, workersId...)
-// }
-
 type Service struct {
 	sync.RWMutex
-	//WaitList                    []*Order //TODO:Remove?
 	ValidationRequests          []*ValidationRequest
 	Accounting                  *accounting.Service
 	Running                     bool
@@ -68,7 +41,6 @@ type Service struct {
 
 func NewService(accounting *accounting.Service, withoutConnectRemoteForTest bool) *Service {
 	return &Service{
-		//WaitList:                    []*Order{},
 		ValidationRequests:          []*ValidationRequest{},
 		Accounting:                  accounting,
 		Running:                     false,
@@ -76,11 +48,6 @@ func NewService(accounting *accounting.Service, withoutConnectRemoteForTest bool
 		stopChan:                    make(chan struct{}),
 	}
 }
-
-//TODO:Remove Order WaitList
-// func (s *Service) GetOrders() []*Order {
-// 	return s.WaitList
-// }
 
 func (s *Service) getValidatableCodeRemote(holder *accounting.Worker, userId string, add int32) (*pb.ValidatableCode, error) {
 	conn, err := grpc.Dial(holder.Addr, grpc.WithInsecure())
