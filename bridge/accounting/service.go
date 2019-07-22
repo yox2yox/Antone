@@ -100,7 +100,7 @@ func (s *Service) SelectDataPoolHolder(userId string) (*Worker, error) {
 }
 
 //新規データプールを作成しHolderを登録する
-func (s *Service) RegistarNewDatapoolHolders(userId string, num int) ([]*Worker, error) {
+func (s *Service) CreateDatapoolAndSelectHolders(userId string, num int) ([]*Worker, error) {
 	s.RLock()
 	lenworkers := len(s.Workers)
 	s.RUnlock()

@@ -64,7 +64,7 @@ func TestCreateOrderSuccess(t *testing.T) {
 		}
 	}
 
-	_, err = accounting.RegistarNewDatapoolHolders(testClientId, 1)
+	_, err = accounting.CreateDatapoolAndSelectHolders(testClientId, 1)
 	if err != nil {
 		t.Fatalf("want no error, but has error %#v", err)
 	}
@@ -97,7 +97,7 @@ func TestValidateCode(t *testing.T) {
 		}
 	}
 
-	holder, err := accounting.RegistarNewDatapoolHolders(testClientId, 1)
+	holder, err := accounting.CreateDatapoolAndSelectHolders(testClientId, 1)
 	if err != nil {
 		t.Fatalf("failed to registar holder %#v", err)
 	}
@@ -138,7 +138,7 @@ func TestGetValidatableCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("want no error,but has error %#v", err)
 	}
-	_, err = accounting.RegistarNewDatapoolHolders(testClientId, 1)
+	_, err = accounting.CreateDatapoolAndSelectHolders(testClientId, 1)
 	if err != nil {
 		t.Fatalf("want no error,but has error %#v", err)
 	}

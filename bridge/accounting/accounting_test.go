@@ -93,17 +93,17 @@ func Test_RegistarNewDataPoolHolders(t *testing.T) {
 	testHoldersNum := 1
 
 	accountingS := accounting.NewService(true)
-	_, err := accountingS.RegistarNewDatapoolHolders(testUserId, testHoldersNum)
+	_, err := accountingS.CreateDatapoolAndSelectHolders(testUserId, testHoldersNum)
 	if err != accounting.ErrWorkersAreNotEnough {
 		t.Fatalf("want has error %#v, but %#v", accounting.ErrWorkersAreNotEnough, err)
 	}
 
 	_, err = accountingS.CreateNewWorker(testWorkersId[0], testWorkerAddr)
-	_, err = accountingS.RegistarNewDatapoolHolders(testUserId, testHoldersNum)
+	_, err = accountingS.CreateDatapoolAndSelectHolders(testUserId, testHoldersNum)
 	if err != nil {
 		t.Fatalf("want no error, but has error %#v", err)
 	}
-	_, err = accountingS.RegistarNewDatapoolHolders(testUserId, testHoldersNum)
+	_, err = accountingS.CreateDatapoolAndSelectHolders(testUserId, testHoldersNum)
 	if err != accounting.ErrDataPoolAlreadyExists {
 		t.Fatalf("want has error %#v, but %#v", accounting.ErrDataPoolAlreadyExists, err)
 	}
@@ -119,7 +119,7 @@ func TestAccountingService_SelectDataPoolHolders(t *testing.T) {
 	}
 
 	_, err = accountingS.CreateNewWorker(testWorkersId[0], testWorkerAddr)
-	_, err = accountingS.RegistarNewDatapoolHolders(testUserId, 1)
+	_, err = accountingS.CreateDatapoolAndSelectHolders(testUserId, 1)
 	if err != nil {
 		t.Fatalf("want no error, but has error %#v", err)
 	}

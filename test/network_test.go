@@ -85,7 +85,7 @@ func Test_CreateNetWork(t *testing.T) {
 		t.Fatalf("want no error,but error %#v", err)
 	}
 
-	_, err = bpeer.Accounting.RegistarNewDatapoolHolders(clientId, 1)
+	_, err = bpeer.Accounting.CreateDatapoolAndSelectHolders(clientId, 1)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
 	}

@@ -108,7 +108,7 @@ func TestOrderEndpoint_ResponseValidatableCode(t *testing.T) {
 		t.Fatalf("failed to create worker %#v", err)
 	}
 
-	_, err = peer.Accounting.RegistarNewDatapoolHolders(testClientId, 1)
+	_, err = peer.Accounting.CreateDatapoolAndSelectHolders(testClientId, 1)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
 	}
