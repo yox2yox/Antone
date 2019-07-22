@@ -204,3 +204,22 @@ func (s *Service) CreateNewClient(userId string) (*Client, error) {
 	s.Unlock()
 	return client, nil
 }
+
+//評価値を更新
+func (s *Service) UpdateReputation(workerId string, confirmed bool, errored bool) (int, error) {
+	_, exist := s.Workers[workerId]
+	if !exist {
+		return 0, ErrIDNotExist
+	}
+	if confirmed {
+		s.Lock()
+		s.Workers[workerId].Reputation += 1
+		s.Unlock()
+	} else {
+		s.Lock()
+		s.Workers[workerId].Reputation -= 1
+		s.Unlock()
+	}
+	return s.Workers[workerId].Reputation, nil
+
+}
