@@ -274,7 +274,7 @@ func (s *Service) Run() {
 					ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 					defer cancel()
 					s.ValidateCode(ctx, vreq.Neednum, vreq.HolderId, vreq.ValidatableCode)
-					//TODO:結果を記録
+					//TODO:結果を記録，送信
 				}()
 			}
 		}
