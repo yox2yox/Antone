@@ -62,12 +62,22 @@ func (s *Service) SelectValidationWorkers(num int) ([]*Worker, error) {
 
 	rand.Seed(time.Now().UnixNano())
 	picked := []*Worker{}
-	//TODO: 重複なくす処理
+
 	for i := 0; i < num; i++ {
 		s.RLock()
 		pickedId := s.WorkersId[rand.Intn(len(s.WorkersId))]
 		s.RUnlock()
-		picked = append(picked, s.Workers[pickedId])
+		contain := false
+		for _, id := range picked {
+			if id.Id == pickedId {
+				contain = true
+			}
+		}
+		if contain == false {
+			picked = append(picked, s.Workers[pickedId])
+		} else {
+			i--
+		}
 	}
 
 	return picked, nil
