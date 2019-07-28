@@ -138,10 +138,6 @@ func TestGetValidatableCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("want no error,but has error %#v", err)
 	}
-	_, err = accounting.CreateDatapoolAndSelectHolders(testClientId, 1)
-	if err != nil {
-		t.Fatalf("want no error,but has error %#v", err)
-	}
 	order := NewService(accounting, true)
 	vcode, _, err := order.GetValidatableCode(testClientId, 1)
 	if err != nil {

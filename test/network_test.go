@@ -75,20 +75,16 @@ func Test_CreateNetWork(t *testing.T) {
 	//defer workerCancel()
 
 	//各種アカウント登録
-	_, err = bpeer.Accounting.CreateNewClient(clientId)
-	if err != nil {
-		t.Fatalf("want no error,but error %#v", err)
-	}
-
 	_, err = bpeer.Accounting.CreateNewWorker(workerId, wpeer.ServerConfig.Addr)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
 	}
 
-	_, err = bpeer.Accounting.CreateDatapoolAndSelectHolders(clientId, 1)
+	_, err = bpeer.Accounting.CreateNewClient(clientId)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
 	}
+
 	data, err := wpeer.DataPool.GetDataPool(clientId)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)

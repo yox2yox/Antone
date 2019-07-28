@@ -58,8 +58,28 @@ func (s *Service) GetWorker(workerId string) (Worker, error) {
 	return *s.Workers[workerId], nil
 }
 
+func (s *Service) GetClient(userId string) (Client, error) {
+	_, exist := s.Clients[userId]
+	if !exist {
+		return Client{}, ErrIDNotExist
+	}
+	return *s.Clients[userId], nil
+}
+
 func (s *Service) GetWorkersCount() int {
 	return len(s.Workers)
+}
+
+func (s *Service) GetDatapoolHolders(userId string) ([]*Worker, error) {
+	holders, exist := s.Holders[userId]
+	if exist == false {
+		return nil, ErrDataPoolHolderNotExist
+	}
+	workers := []*Worker{}
+	for _, workerid := range holders {
+		workers = append(workers, s.Workers[workerid])
+	}
+	return workers, nil
 }
 
 //workerの中からnum台選択して返す
@@ -213,6 +233,11 @@ func (s *Service) CreateNewClient(userId string) (*Client, error) {
 	if exist {
 		return nil, ErrIDAlreadyExists
 	}
+	_, err := s.CreateDatapoolAndSelectHolders(userId, 1)
+	if err != nil {
+		return nil, err
+	}
+
 	client := &Client{
 		Id:      userId,
 		Balance: 0,
