@@ -21,11 +21,11 @@ func Test_CreateNewDataPool(t *testing.T) {
 	if dp == nil {
 		t.Fatalf("want datapool is not nil, but nil")
 	}
-	err := dp.CreateNewDataPool(testUserId)
+	err := dp.CreateNewDataPool(testUserId, 0)
 	if err != nil {
 		t.Fatalf("want no error, but has error %#v", err)
 	}
-	err = dp.CreateNewDataPool(testUserId)
+	err = dp.CreateNewDataPool(testUserId, 0)
 	if err != datapool.ErrDataPoolAlreadyExist {
 		t.Fatalf("want has error 'ErrDataPoolAlreadyExist', but has error %#v", err)
 	}
@@ -42,7 +42,7 @@ func Test_GetDataPool(t *testing.T) {
 		t.Fatalf("want has error 'ErrDataPoolNotExist', but has error %#v", err)
 	}
 
-	err = dp.CreateNewDataPool(testUserId)
+	err = dp.CreateNewDataPool(testUserId, 0)
 	if err != nil {
 		t.Fatalf("want no error, but has error %#v", err)
 	}
@@ -64,7 +64,7 @@ func Test_SetDataPool(t *testing.T) {
 		t.Fatalf("want has error 'ErrDataPoolNotExist', but has error %#v", err)
 	}
 
-	err = dp.CreateNewDataPool(testUserId)
+	err = dp.CreateNewDataPool(testUserId, 0)
 	if err != nil {
 		t.Fatalf("want no error, but has error %#v", err)
 	}
@@ -93,7 +93,7 @@ func Test_ExistDataPool(t *testing.T) {
 		t.Fatalf("want datapool does not exist, but exist")
 	}
 
-	err := dp.CreateNewDataPool(testUserId)
+	err := dp.CreateNewDataPool(testUserId, 0)
 	if err != nil {
 		t.Fatalf("want no error, but has error %#v", err)
 	}

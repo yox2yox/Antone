@@ -20,14 +20,24 @@ func NewService() *Service {
 }
 
 //新規DataPoolの追加
-func (s *Service) CreateNewDataPool(userid string) error {
+func (s *Service) CreateNewDataPool(userid string, data int32) error {
 	//TODO:ミューテーションを考える
 	_, exist := s.dataPool[userid]
 	if exist {
 		return ErrDataPoolAlreadyExist
 	}
-	var data int32 = 0
-	s.dataPool[userid] = &data
+	var pool int32 = data
+	s.dataPool[userid] = &pool
+	return nil
+}
+
+//Datapoolを削除
+func (s *Service) DeleteDataPool(userid string) error {
+	_, exist := s.dataPool[userid]
+	if !exist {
+		return ErrDataPoolNotExist
+	}
+	delete(s.dataPool, userid)
 	return nil
 }
 

@@ -117,7 +117,7 @@ func TestWorkerEndpoint_ResponseValidatableCode(t *testing.T) {
 		t.Fatalf("want error but nil")
 	}
 
-	peer.DataPool.CreateNewDataPool(testUserId)
+	peer.DataPool.CreateNewDataPool(testUserId, 0)
 
 	vCode, err := client.GetValidatableCode(ctxClient, &pb.ValidatableCodeRequest{Bridgeid: "bridge0", Userid: testUserId, Add: 10})
 	if err != nil {
@@ -199,7 +199,7 @@ func TestWorkerEndpoint_UpdateDb(t *testing.T) {
 		t.Fatalf("want error, but nil")
 	}
 
-	peer.DataPool.CreateNewDataPool(testUserId)
+	peer.DataPool.CreateNewDataPool(testUserId, 0)
 
 	dbUpdate, err = client.UpdateDatapool(ctxClient, &pb.DatapoolUpdate{Userid: testUserId, Pool: 6})
 	if err != nil {

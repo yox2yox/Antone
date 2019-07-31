@@ -9,7 +9,8 @@ service Worker {
   rpc OrderValidation(ValidatableCode) returns (ValidationResult) {}
   rpc GetValidatableCode(ValidatableCodeRequest) returns (ValidatableCode) {}
   rpc UpdateDatapool(DatapoolUpdate) returns (UpdateResult) {}
-  rpc CreateNewDatapool(DatapoolInfo) returns (CreateDatapoolResult) {}
+  rpc CreateDatapool(DatapoolInfo) returns (CreateDatapoolResult) {}
+  rpc DeleteDatapool(DatapoolInfo) returns (DeleteDatapoolResult) {}
 
 }
 
@@ -38,8 +39,11 @@ message UpdateResult {}
 
 message DatapoolInfo {
   string userid = 1;
+  int32 data = 2;
 }
 
 message CreateDatapoolResult{
   int32 pool = 1;
 }
+
+message DeleteDatapoolResult{}

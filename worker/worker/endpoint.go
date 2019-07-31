@@ -54,12 +54,12 @@ func (e *Endpoint) UpdateDatapool(ctx context.Context, datapoolUpdate *pb.Datapo
 	return &pb.UpdateResult{}, err
 }
 
-func (e *Endpoint) CreateNewDatapool(ctx context.Context, poolInfo *pb.DatapoolInfo) (*pb.CreateDatapoolResult, error) {
+func (e *Endpoint) CreateDatapool(ctx context.Context, poolInfo *pb.DatapoolInfo) (*pb.CreateDatapoolResult, error) {
 	exist := e.Datapool.ExistDataPool(poolInfo.Userid)
 	if exist {
 		return nil, ErrDataPoolAlreadyExist
 	} else {
-		err := e.Datapool.CreateNewDataPool(poolInfo.Userid)
+		err := e.Datapool.CreateNewDataPool(poolInfo.Userid, poolInfo.Data)
 		if err != nil {
 			return nil, err
 		}
@@ -69,4 +69,17 @@ func (e *Endpoint) CreateNewDatapool(ctx context.Context, poolInfo *pb.DatapoolI
 		return nil, err
 	}
 	return &pb.CreateDatapoolResult{Pool: pool}, nil
+}
+
+func (e *Endpoint) DeleteDatapool(ctx context.Context, poolInfo *pb.DatapoolInfo) (*pb.DeleteDatapoolResult, error) {
+	exist := e.Datapool.ExistDataPool(poolInfo.Userid)
+	if !exist {
+		return nil, ErrDataPoolNotExist
+	} else {
+		err := e.Datapool.DeleteDataPool(poolInfo.Userid)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &pb.DeleteDatapoolResult{}, nil
 }

@@ -170,7 +170,7 @@ func (s *Service) CreateDatapoolAndSelectHolders(userId string, num int) ([]*Wor
 				defer cancel()
 
 				datapoolInfo := &workerpb.DatapoolInfo{Userid: userId}
-				_, err = workerClient.CreateNewDatapool(ctx, datapoolInfo)
+				_, err = workerClient.CreateDatapool(ctx, datapoolInfo)
 				if err != nil {
 					return
 				}
@@ -249,7 +249,7 @@ func (s *Service) CreateNewClient(userId string) (*Client, error) {
 }
 
 //評価値を更新
-func (s *Service) UpdateReputation(workerId string, confirmed bool, errored bool) (int, error) {
+func (s *Service) UpdateReputation(workerId string, confirmed bool) (int, error) {
 	_, exist := s.Workers[workerId]
 	if !exist {
 		return 0, ErrIDNotExist
@@ -264,5 +264,52 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, errored bool
 		s.Unlock()
 	}
 	return s.Workers[workerId].Reputation, nil
+
+}
+
+//リモートワーカのデータプールを更新する
+func (s *Service) UpdateDatapoolRemote(userId string, data int) error {
+	holders, err := s.GetDatapoolHolders(userId)
+	if err != nil {
+		return err
+	}
+	if holders == nil {
+		return ErrDataPoolHolderNotExist
+	}
+
+	failedHolders := []string{}
+
+	wg := sync.WaitGroup{}
+
+	for _, holder := range holders {
+		wg.Add(1)
+		go func(target *Worker) {
+			defer wg.Done()
+			conn, err := grpc.Dial(target.Addr, grpc.WithInsecure())
+			if err != nil {
+				failedHolders = append(failedHolders, target.Id)
+				return
+			}
+			defer conn.Close()
+			workerClient := workerpb.NewWorkerClient(conn)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			datapoolUpdate := &workerpb.DatapoolUpdate{
+				Userid: userId,
+				Pool:   int32(data),
+			}
+			_, err = workerClient.UpdateDatapool(ctx, datapoolUpdate)
+			if err != nil {
+				failedHolders = append(failedHolders, target.Id)
+				return
+			}
+		}(holder)
+	}
+
+	wg.Wait()
+
+	//TODO:エラーを出したホルダーを新規ホルダーに交換
+
+	return nil
 
 }

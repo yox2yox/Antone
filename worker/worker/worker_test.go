@@ -59,7 +59,7 @@ func TestWorkerEndpoint_CreateNewDataPool_Success(t *testing.T) {
 	client := pb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	createResult, err := client.CreateNewDatapool(ctx, &pb.DatapoolInfo{Userid: testUserId})
+	createResult, err := client.CreateDatapool(ctx, &pb.DatapoolInfo{Userid: testUserId})
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
 	}
@@ -88,7 +88,7 @@ func TestWorkerEndpoint_CreateExistDataPool_Fail(t *testing.T) {
 	}()
 
 	//データプール作成
-	err = datapool.CreateNewDataPool(testUserId)
+	err = datapool.CreateNewDataPool(testUserId, 0)
 	if err != nil {
 		t.Fatalf("failed to create datapool %#v", err)
 	}
@@ -102,7 +102,7 @@ func TestWorkerEndpoint_CreateExistDataPool_Fail(t *testing.T) {
 	client := pb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
-	_, err = client.CreateNewDatapool(ctx, &pb.DatapoolInfo{Userid: testUserId})
+	_, err = client.CreateDatapool(ctx, &pb.DatapoolInfo{Userid: testUserId})
 	if err == nil {
 		t.Fatalf("failed to get error %#v", err)
 	}
@@ -131,7 +131,7 @@ func TestWorkerEndpoint_GetValidatableCode_Success(t *testing.T) {
 	defer grpcServer.Stop()
 	defer listen.Close()
 
-	err = datapool.CreateNewDataPool(testUserId)
+	err = datapool.CreateNewDataPool(testUserId, 0)
 	if err != nil {
 		t.Fatalf("failed to create datapool %#v", err)
 	}
@@ -203,7 +203,7 @@ func TestWorkerEndpoint_UpdateDatabase_Success(t *testing.T) {
 	}()
 	defer grpcServer.Stop()
 
-	err = datapool.CreateNewDataPool(testUserId)
+	err = datapool.CreateNewDataPool(testUserId, 0)
 	if err != nil {
 		t.Fatalf("failed to create datapool %#v", err)
 	}
