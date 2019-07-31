@@ -20,6 +20,7 @@ type Worker struct {
 	Addr       string
 	Id         string
 	Reputation int
+	Holdinds   []string
 }
 
 type Service struct {
@@ -133,6 +134,48 @@ func (s *Service) SelectDataPoolHolder(userId string) (*Worker, error) {
 	return rtnworkers, nil
 }
 
+//データプールを削除
+func (s *Service) DeleteDatapoolAndHolder(userId string, workerId string) error {
+	s.RLock()
+	_, exist := s.Holders[userId]
+	s.RUnlock()
+	if !exist {
+		return ErrDataPoolHolderNotExist
+	}
+	for _, id := range s.Holders[userId] {
+		if id == workerId {
+			target, exist := s.Workers[userId]
+			if !exist {
+				return ErrIDNotExist
+			}
+
+			holds := []string{}
+			for _, hold := range target.Holdinds {
+				if hold != userId {
+					holds = append(holds, hold)
+				}
+			}
+			s.Workers[userId].Holdinds = holds
+
+			conn, err := grpc.Dial(target.Addr, grpc.WithInsecure())
+			if err != nil {
+				return err
+			}
+			workerClient := workerpb.NewWorkerClient(conn)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			deleteReq := &workerpb.DatapoolInfo{Userid: userId}
+			_, err = workerClient.DeleteDatapool(ctx, deleteReq)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+	}
+	return ErrIDNotExist
+}
+
 //データプールを作成しHolderに登録する
 func (s *Service) CreateDatapoolAndSelectHolders(userId string, num int) ([]Worker, error) {
 
@@ -187,11 +230,13 @@ func (s *Service) CreateDatapoolAndSelectHolders(userId string, num int) ([]Work
 				}
 				s.Lock()
 				s.Holders[userId] = append(s.Holders[userId], target.Id)
+				s.Workers[target.Id].Holdinds = append(s.Workers[target.Id].Holdinds, userId)
 				s.Unlock()
 			}(worker)
 		} else {
 			s.Lock()
 			s.Holders[userId] = append(s.Holders[userId], worker.Id)
+			s.Workers[worker.Id].Holdinds = append(s.Workers[worker.Id].Holdinds, userId)
 			s.Unlock()
 		}
 	}
@@ -228,6 +273,7 @@ func (s *Service) CreateNewWorker(workerId string, Addr string) (*Worker, error)
 		Addr:       Addr,
 		Id:         workerId,
 		Reputation: 0,
+		Holdinds:   []string{},
 	}
 	s.Lock()
 	s.Workers[workerId] = worker
