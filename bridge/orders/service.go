@@ -118,7 +118,7 @@ func (s *Service) AddValidationRequest(needNum int, holderId string, vcode *pb.V
 }
 
 //結果リストから、必要な追加ワーカ数および最も多数だった結果を返す
-func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results map[string]*ValidationResult) (int, *ValidationResult) {
+func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []ValidationResult) (int, ValidationResult) {
 	//TODO: 確率を計算する
 	resultmap := map[int32]int{}
 	rejects := 0
@@ -146,7 +146,7 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results map[str
 	}
 
 	var need int
-	conclusion := &ValidationResult{}
+	conclusion := ValidationResult{}
 	if maxcount > rejects {
 		conclusion.IsRejected = false
 		conclusion.IsError = false
@@ -176,11 +176,33 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results map[str
 
 }
 
+//バリデーション結果に基づいて評価値を登録する
+func (s *Service) commitReputation(holderId string, results []ValidationResult, conclusion *ValidationResult) {
+	if conclusion != nil {
+		if conclusion.IsRejected == true {
+			s.Accounting.UpdateReputation(holderId, false)
+		} else {
+			s.Accounting.UpdateReputation(holderId, true)
+		}
+	}
+	for _, res := range results {
+		confirmed := false
+		if res.Data == conclusion.Data && res.IsError == false {
+			confirmed = true
+		}
+		if res.IsRejected == true && res.IsError == false && conclusion.IsRejected == true {
+			confirmed = true
+		}
+		s.Accounting.UpdateReputation(res.WorkerId, confirmed)
+	}
+}
+
 //ValidatableCodeを検証
-func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string, vCode *pb.ValidatableCode) error {
+func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string, vCode *pb.ValidatableCode) ([]ValidationResult, *ValidationResult, error) {
 
 	waitlist := []string{}
-	results := map[string]*ValidationResult{}
+	results := []ValidationResult{}
+	var conclusion *ValidationResult
 
 	errChan := make(chan error)                //エラー送信用チャネル
 	resultChan := make(chan *ValidationResult) //バリデーション結果送信チャネル
@@ -229,9 +251,12 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 
 			select {
 			case res := <-resultChan:
-				results[res.WorkerId] = res
-				needworker, _ := s.calcNeedAdditionalWorkerAndResult(picknum, results)
+				results = append(results, *res)
+				var needworker int
+				needworker, concval := s.calcNeedAdditionalWorkerAndResult(picknum, results)
+				conclusion = &concval
 				if needworker > 0 {
+					conclusion = nil
 					nextpick = needworker - len(waitlist)
 					if nextpick < 0 {
 						nextpick = 0
@@ -249,14 +274,11 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return results, nil, ctx.Err()
 		case err := <-errChan:
-			return err
+			return results, nil, err
 		case <-done:
-			for _, res := range results {
-				s.Accounting.UpdateReputation(res.WorkerId, !res.IsRejected, res.IsError)
-			}
-			return nil
+			return results, conclusion, nil
 		}
 	}
 }
@@ -273,8 +295,14 @@ func (s *Service) Run() {
 				go func() {
 					ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 					defer cancel()
-					s.ValidateCode(ctx, vreq.Neednum, vreq.HolderId, vreq.ValidatableCode)
+					results, conclusion, _ := s.ValidateCode(ctx, vreq.Neednum, vreq.HolderId, vreq.ValidatableCode)
+					if results != nil {
+						s.commitReputation(vreq.HolderId, results, conclusion)
+					}
 					//TODO:結果を記録，送信
+					if conclusion != nil && conclusion.IsRejected == false {
+
+					}
 				}()
 			}
 		}

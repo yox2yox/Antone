@@ -106,9 +106,12 @@ func TestValidateCode(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	err = orderService.ValidateCode(ctx, 5, holder[0].Id, &pb.ValidatableCode{Data: 10, Add: 0})
+	res, conc, err := orderService.ValidateCode(ctx, 5, holder[0].Id, &pb.ValidatableCode{Data: 10, Add: 0})
 	if err != nil {
 		t.Fatalf("failed to registar validate code %#v", err)
+	}
+	if res != nil {
+		orderService.commitReputation(holder[0].Id, res, conc)
 	}
 
 	repcount := 0
@@ -118,12 +121,12 @@ func TestValidateCode(t *testing.T) {
 			t.Fatalf("want no error, but has error %#v", err)
 		}
 		//評価値が1になっている台数を数える
-		if worker.Reputation != 1 {
+		if worker.Reputation >= 1 {
 			repcount += 1
 		}
 	}
-	if repcount != 5 {
-		t.Fatalf("want repcount=5, but %#v", repcount)
+	if repcount != 6 {
+		t.Fatalf("want repcount=6, but %#v", repcount)
 	}
 
 }
@@ -158,7 +161,7 @@ func TestServiceRunAndStop(t *testing.T) {
 		order.Run()
 		wg.Done()
 	}()
-	order.AddValidationRequest(1, testClientId, &pb.ValidatableCode{})
+	order.AddValidationRequest(1, testClientId, &pb.ValidatableCode{Data: 0, Add: 0})
 	time.Sleep(3 * time.Second)
 	order.Stop()
 	wg.Wait()
