@@ -152,7 +152,6 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []Valid
 		conclusion.IsError = false
 		conclusion.Data = resdata
 		need = picknum - maxcount
-
 	} else {
 		conclusion.IsRejected = true
 		conclusion.IsError = false
@@ -200,85 +199,75 @@ func (s *Service) commitReputation(holderId string, results []ValidationResult, 
 //ValidatableCodeを検証
 func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string, vCode *pb.ValidatableCode) ([]ValidationResult, *ValidationResult, error) {
 
+	anavailable := []string{}
 	waitlist := []string{}
 	results := []ValidationResult{}
 	var conclusion *ValidationResult
 
 	errChan := make(chan error)                //エラー送信用チャネル
 	resultChan := make(chan *ValidationResult) //バリデーション結果送信チャネル
-	done := make(chan struct{})                //完了チャネル
 
-	go func() {
-		nextpick := picknum
+	nextpick := picknum
 
-		for {
-			if nextpick > 0 {
-				//ワーカー取得
-				pickedWorkers, err := s.Accounting.SelectValidationWorkers(nextpick)
+	for {
+		if nextpick > 0 {
+			//ワーカー取得
+			pickedWorkers, err := s.Accounting.SelectValidationWorkers(nextpick, anavailable)
 
-				if err == nil {
-					nextpick = 0
-					pickedIDs := []string{}
-					for _, worker := range pickedWorkers {
-						pickedIDs = append(pickedIDs, worker.Id)
-					}
-					waitlist = append(waitlist, pickedIDs...)
+			if err == nil {
+				nextpick = 0
+				pickedIDs := []string{}
+				for _, worker := range pickedWorkers {
+					pickedIDs = append(pickedIDs, worker.Id)
+				}
+				anavailable = append(anavailable, pickedIDs...)
+				waitlist = append(waitlist, pickedIDs...)
 
-					//各ワーカにValidationリクエスト送信
-					for _, worker := range pickedWorkers {
-						if s.WithoutConnectRemoteForTest == false {
-							go func(target *accounting.Worker) {
-								validationResult := s.validateCodeRemote(target, vCode)
-								resultChan <- validationResult
-							}(worker)
-						} else {
-							go func(target *accounting.Worker) {
-								tmp := []string{}
-								for _, id := range waitlist {
-									if id != target.Id {
-										tmp = append(tmp, id)
-									}
+				//各ワーカにValidationリクエスト送信
+				for _, worker := range pickedWorkers {
+					if s.WithoutConnectRemoteForTest == false {
+						go func(target *accounting.Worker) {
+							validationResult := s.validateCodeRemote(target, vCode)
+							resultChan <- validationResult
+						}(worker)
+					} else {
+						go func(target *accounting.Worker) {
+							tmp := []string{}
+							for _, id := range waitlist {
+								if id != target.Id {
+									tmp = append(tmp, id)
 								}
-								waitlist = tmp
-								resultChan <- &ValidationResult{WorkerId: target.Id, Data: 10, IsRejected: false, IsError: false}
-							}(worker)
-						}
+							}
+							waitlist = tmp
+							resultChan <- &ValidationResult{WorkerId: target.Id, Data: 10, IsRejected: false, IsError: false}
+						}(worker)
 					}
-				} else {
-					errChan <- err
 				}
-			}
-
-			select {
-			case res := <-resultChan:
-				results = append(results, *res)
-				var needworker int
-				needworker, concval := s.calcNeedAdditionalWorkerAndResult(picknum, results)
-				conclusion = &concval
-				if needworker > 0 {
-					conclusion = nil
-					nextpick = needworker - len(waitlist)
-					if nextpick < 0 {
-						nextpick = 0
-					}
-				} else {
-					close(done)
-					return
-				}
-			case <-ctx.Done():
-				return
-			default:
+			} else {
+				errChan <- err
 			}
 		}
-	}()
-	for {
+
 		select {
+		case res := <-resultChan:
+			results = append(results, *res)
+			var needworker int
+			needworker, concval := s.calcNeedAdditionalWorkerAndResult(picknum, results)
+			conclusion = &concval
+			if needworker > 0 {
+				conclusion = nil
+				nextpick = needworker - len(waitlist)
+				if nextpick < 0 {
+					nextpick = 0
+				}
+			} else {
+				return results, conclusion, nil
+			}
 		case <-ctx.Done():
 			return results, nil, ctx.Err()
 		case err := <-errChan:
 			return results, nil, err
-		case <-done:
-			return results, conclusion, nil
+		default:
 		}
 	}
 }
