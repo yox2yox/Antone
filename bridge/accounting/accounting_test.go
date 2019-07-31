@@ -42,7 +42,7 @@ func TestAccountingService_SelectValidationWorkers(t *testing.T) {
 		t.Fatalf("failed to create worker %#v", err)
 	}
 
-	workers, err := accounting.SelectValidationWorkers(1)
+	workers, err := accounting.SelectValidationWorkers(1, []string{})
 	if err != nil {
 		t.Fatalf("failed to get validation workers%#v", err)
 	}
@@ -60,7 +60,7 @@ func TestAccountingService_SelectValidationWorkers(t *testing.T) {
 		t.Fatalf("failed to create worker %#v", err)
 	}
 
-	workers, err = accounting.SelectValidationWorkers(2)
+	workers, err = accounting.SelectValidationWorkers(2, []string{})
 	if err != nil {
 		t.Fatalf("failed to get validation workers%#v", err)
 	}
@@ -78,7 +78,7 @@ func TestAccountingService_SelectValidationWorkers(t *testing.T) {
 func TestAccountingService_SelectValidationWorkersFail(t *testing.T) {
 	accountingS := accounting.NewService(true)
 
-	_, err := accountingS.SelectValidationWorkers(1)
+	_, err := accountingS.SelectValidationWorkers(1, []string{})
 	if err != accounting.ErrWorkersAreNotEnough {
 		t.Fatalf("failed to get NotEnough error%#v", err)
 	}
@@ -88,7 +88,7 @@ func TestAccountingService_SelectValidationWorkersFail(t *testing.T) {
 		t.Fatalf("failed to create worker %#v", err)
 	}
 
-	_, err = accountingS.SelectValidationWorkers(2)
+	_, err = accountingS.SelectValidationWorkers(2, []string{})
 	if err != accounting.ErrWorkersAreNotEnough {
 		t.Fatalf("failed to get NotEnough error%#v", err)
 	}
@@ -111,8 +111,14 @@ func Test_RegistarNewDataPoolHolders(t *testing.T) {
 		t.Fatalf("want no error, but has error %#v", err)
 	}
 	_, err = accountingS.CreateDatapoolAndSelectHolders(testUserId, testHoldersNum)
-	if err != accounting.ErrDataPoolAlreadyExists {
-		t.Fatalf("want has error %#v, but %#v", accounting.ErrDataPoolAlreadyExists, err)
+	if err != accounting.ErrWorkersAreNotEnough {
+		t.Fatalf("want has error %#v, but %#v", accounting.ErrWorkersAreNotEnough, err)
+	}
+
+	_, err = accountingS.CreateNewWorker(testWorkersId[1], testWorkerAddr)
+	_, err = accountingS.CreateDatapoolAndSelectHolders(testUserId, testHoldersNum)
+	if err != nil {
+		t.Fatalf("want no error, but has error %#v", err)
 	}
 
 }

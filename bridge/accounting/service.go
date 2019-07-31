@@ -38,6 +38,7 @@ var (
 	ErrDataPoolHolderNotExist    = errors.New("this user's datapool doesn't exist")
 	ErrDataPoolAlreadyExists     = errors.New("this user's datapool already exists")
 	ErrCreateDataPoolNotComplete = errors.New("failed to complete to create datepool")
+	ErrArgumentIsInvalid         = errors.New("an argument is invalid")
 )
 
 func NewService(withoutConnectRemoteForTest bool) *Service {
@@ -82,9 +83,9 @@ func (s *Service) GetDatapoolHolders(userId string) ([]*Worker, error) {
 	return workers, nil
 }
 
-//workerの中からnum台選択して返す
-func (s *Service) SelectValidationWorkers(num int) ([]*Worker, error) {
-	if len(s.Workers) < num {
+//exceptionを除くworkerの中からnum台選択して返す
+func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worker, error) {
+	if len(s.Workers)-len(exception) < num {
 		return nil, ErrWorkersAreNotEnough
 	}
 
@@ -98,6 +99,11 @@ func (s *Service) SelectValidationWorkers(num int) ([]*Worker, error) {
 		contain := false
 		for _, id := range picked {
 			if id.Id == pickedId {
+				contain = true
+			}
+		}
+		for _, id := range exception {
+			if id == pickedId {
 				contain = true
 			}
 		}
@@ -127,10 +133,25 @@ func (s *Service) SelectDataPoolHolder(userId string) (*Worker, error) {
 	return rtnworkers, nil
 }
 
-//新規データプールを作成しHolderを登録する
-func (s *Service) CreateDatapoolAndSelectHolders(userId string, num int) ([]*Worker, error) {
+//データプールを作成しHolderに登録する
+func (s *Service) CreateDatapoolAndSelectHolders(userId string, num int) ([]Worker, error) {
+
+	//TODO:リモートから返信がなかった場合の処理
+	if num < 0 {
+		return nil, ErrArgumentIsInvalid
+	}
+
 	s.RLock()
-	lenworkers := len(s.Workers)
+	_, exist := s.Holders[userId]
+	s.RUnlock()
+	if !exist {
+		s.Lock()
+		s.Holders[userId] = []string{}
+		s.Unlock()
+	}
+
+	s.RLock()
+	lenworkers := len(s.Workers) - len(s.Holders[userId])
 	s.RUnlock()
 	if lenworkers < num {
 		return nil, ErrWorkersAreNotEnough
@@ -138,17 +159,7 @@ func (s *Service) CreateDatapoolAndSelectHolders(userId string, num int) ([]*Wor
 
 	rand.Seed(time.Now().UnixNano())
 
-	s.RLock()
-	_, exist := s.Holders[userId]
-	s.RUnlock()
-	if exist {
-		return nil, ErrDataPoolAlreadyExists
-	}
-	s.Lock()
-	s.Holders[userId] = []string{}
-	s.Unlock()
-
-	workers, err := s.SelectValidationWorkers(num)
+	workers, err := s.SelectValidationWorkers(num, s.Holders[userId])
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +168,7 @@ func (s *Service) CreateDatapoolAndSelectHolders(userId string, num int) ([]*Wor
 
 	for _, worker := range workers {
 		if !s.WithoutConnectRemoteForTest {
-			//RemoteワーカにCreateNewDatapoolリクエスト送信
+			//RemoteワーカにCreateDatapoolリクエスト送信
 			wg.Add(1)
 			go func(target *Worker) {
 				defer wg.Done()
@@ -188,7 +199,7 @@ func (s *Service) CreateDatapoolAndSelectHolders(userId string, num int) ([]*Wor
 	if !s.WithoutConnectRemoteForTest {
 		wg.Wait()
 	}
-	holders := []*Worker{}
+	holders := []Worker{}
 	s.RLock()
 	holdersOriginal := s.Holders[userId]
 	s.RUnlock()
@@ -198,7 +209,7 @@ func (s *Service) CreateDatapoolAndSelectHolders(userId string, num int) ([]*Wor
 	for _, holder := range holdersOriginal {
 		worker, exist := s.Workers[holder]
 		if exist {
-			holders = append(holders, worker)
+			holders = append(holders, *worker)
 		}
 	}
 
