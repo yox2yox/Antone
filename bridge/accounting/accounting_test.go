@@ -406,7 +406,6 @@ func TestEndpoint(t *testing.T) {
 func TestServiceWithRemoteWorker(t *testing.T) {
 
 	addrremote := "127.0.0.1:10001"
-	portremote := "10001"
 
 	accountingS := accounting.NewService(false)
 
@@ -420,8 +419,6 @@ func TestServiceWithRemoteWorker(t *testing.T) {
 		if err != nil {
 			t.Fatalf("want no error,but error %#v", err)
 		}
-		conf.Server.Addr = addrremote
-		conf.Server.Port = portremote
 		peer, err := worker.New(conf.Server, false)
 		if err != nil {
 			t.Fatalf("want no error,but error %#v", err)
