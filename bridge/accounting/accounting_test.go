@@ -8,6 +8,8 @@ import (
 	"time"
 	"yox2yox/antone/bridge/accounting"
 	pb "yox2yox/antone/bridge/pb"
+	"yox2yox/antone/worker"
+	wconfig "yox2yox/antone/worker/config"
 
 	"google.golang.org/grpc"
 )
@@ -100,23 +102,23 @@ func Test_RegistarNewDataPoolHolders(t *testing.T) {
 	testHoldersNum := 1
 
 	accountingS := accounting.NewService(true)
-	_, err := accountingS.CreateDatapoolAndSelectHolders(testUserId, testHoldersNum)
+	_, err := accountingS.CreateDatapoolAndSelectHolders(testUserId, 0, testHoldersNum)
 	if err != accounting.ErrWorkersAreNotEnough {
 		t.Fatalf("want has error %#v, but %#v", accounting.ErrWorkersAreNotEnough, err)
 	}
 
 	_, err = accountingS.CreateNewWorker(testWorkersId[0], testWorkerAddr)
-	_, err = accountingS.CreateDatapoolAndSelectHolders(testUserId, testHoldersNum)
+	_, err = accountingS.CreateDatapoolAndSelectHolders(testUserId, 0, testHoldersNum)
 	if err != nil {
 		t.Fatalf("want no error, but has error %#v", err)
 	}
-	_, err = accountingS.CreateDatapoolAndSelectHolders(testUserId, testHoldersNum)
+	_, err = accountingS.CreateDatapoolAndSelectHolders(testUserId, 0, testHoldersNum)
 	if err != accounting.ErrWorkersAreNotEnough {
 		t.Fatalf("want has error %#v, but %#v", accounting.ErrWorkersAreNotEnough, err)
 	}
 
 	_, err = accountingS.CreateNewWorker(testWorkersId[1], testWorkerAddr)
-	_, err = accountingS.CreateDatapoolAndSelectHolders(testUserId, testHoldersNum)
+	_, err = accountingS.CreateDatapoolAndSelectHolders(testUserId, 0, testHoldersNum)
 	if err != nil {
 		t.Fatalf("want no error, but has error %#v", err)
 	}
@@ -148,23 +150,30 @@ func TestGetHolders(t *testing.T) {
 func TestAccountingService_SelectDataPoolHolders(t *testing.T) {
 	accountingS := accounting.NewService(true)
 
-	holder, err := accountingS.SelectDataPoolHolder(testUserId)
+	holder, err := accountingS.SelectDataPoolHolder(testUserId, []string{})
 	if err != accounting.ErrDataPoolHolderNotExist {
 		t.Fatalf("want has error %#v, but %#v", accounting.ErrDataPoolHolderNotExist, err)
 	}
 
 	_, err = accountingS.CreateNewWorker(testWorkersId[0], testWorkerAddr)
-	_, err = accountingS.CreateDatapoolAndSelectHolders(testUserId, 1)
 	if err != nil {
 		t.Fatalf("want no error, but has error %#v", err)
+	}
+	_, err = accountingS.CreateDatapoolAndSelectHolders(testUserId, 0, 1)
+	if err != nil {
+		t.Fatalf("want no error, but has error %#v", err)
+	}
+	holder, err = accountingS.SelectDataPoolHolder(testUserId, []string{"aaa"})
+	if err != accounting.ErrWorkersAreNotEnough {
+		t.Fatalf("want has error %#v, but %#v", accounting.ErrWorkersAreNotEnough, err)
 	}
 
-	holder, err = accountingS.SelectDataPoolHolder(testUserId)
+	holder, err = accountingS.SelectDataPoolHolder(testUserId, []string{})
 	if err != nil {
 		t.Fatalf("want no error, but has error %#v", err)
 	}
-	if holder == nil {
-		t.Fatalf("want holder not nil, but nil")
+	if holder.Id == "" {
+		t.Fatalf("want holderid not nil, but nil")
 	}
 
 }
@@ -333,7 +342,7 @@ func TestEndpoint(t *testing.T) {
 	if clientlocal.Balance != 0 {
 		t.Fatalf("want clientlocal balance == 0,but %#v", clientlocal.Balance)
 	}
-	_, err = accountingS.SelectDataPoolHolder(clientId)
+	_, err = accountingS.SelectDataPoolHolder(clientId, []string{})
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
 	}
@@ -390,6 +399,89 @@ func TestEndpoint(t *testing.T) {
 	}
 	if clientlocal.Balance != 0 {
 		t.Fatalf("want clientlocal balance == 0,but %#v", clientlocal.Balance)
+	}
+
+}
+
+func TestServiceWithRemoteWorker(t *testing.T) {
+
+	addrremote := "127.0.0.1:10001"
+	portremote := "10001"
+
+	accountingS := accounting.NewService(false)
+
+	_, err := accountingS.CreateNewWorker(testWorkersId[0], addrremote)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+
+	go func() {
+		conf, err := wconfig.ReadWorkerConfig()
+		if err != nil {
+			t.Fatalf("want no error,but error %#v", err)
+		}
+		conf.Server.Addr = addrremote
+		conf.Server.Port = portremote
+		peer, err := worker.New(conf.Server, false)
+		if err != nil {
+			t.Fatalf("want no error,but error %#v", err)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		defer peer.Close()
+		err = peer.Run(ctx)
+		if err != nil {
+			t.Fatalf("want no error,but error %#v", err)
+		}
+	}()
+
+	time.Sleep(2 * time.Second)
+
+	_, err = accountingS.CreateNewClient(testUserId)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+	holders, err := accountingS.GetDatapoolHolders(testUserId)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+	if len(holders) != 1 {
+		t.Fatalf("want length of holders is 1,but %#v", len(holders))
+	}
+
+	data, _, err := accountingS.FetcheDatapoolFromRemote(testUserId)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+	if data != 0 {
+		t.Fatalf("want data = 0,but error %#v", data)
+	}
+
+	holder, err := accountingS.SelectDataPoolHolder(testUserId, []string{})
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+
+	err = accountingS.DeleteDatapoolAndHolderOnLocal(testUserId, holder.Id)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+	holders, err = accountingS.GetDatapoolHolders(testUserId)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+	if len(holders) != 0 {
+		t.Fatalf("want length of holders is 0,but %#v", len(holders))
+	}
+
+	err = accountingS.DeleteDatapoolOnRemote(testUserId, holder.Id)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+
+	_, err = accountingS.SelectDataPoolHolder(testUserId, []string{})
+	if err != accounting.ErrDataPoolHolderNotExist {
+		t.Fatalf("want error %#v,but error %#v", accounting.ErrDataPoolHolderNotExist, err)
 	}
 
 }

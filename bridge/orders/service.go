@@ -49,7 +49,7 @@ func NewService(accounting *accounting.Service, withoutConnectRemoteForTest bool
 	}
 }
 
-func (s *Service) getValidatableCodeRemote(holder *accounting.Worker, userId string, add int32) (*pb.ValidatableCode, error) {
+func (s *Service) getValidatableCodeRemote(holder accounting.Worker, userId string, add int32) (*pb.ValidatableCode, error) {
 	conn, err := grpc.Dial(holder.Addr, grpc.WithInsecure())
 	client := workerpb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -69,7 +69,7 @@ func (s *Service) getValidatableCodeRemote(holder *accounting.Worker, userId str
 
 //ValidatableCodeを取得する
 func (s *Service) GetValidatableCode(userId string, add int32) (*pb.ValidatableCode, string, error) {
-	holder, err := s.Accounting.SelectDataPoolHolder(userId)
+	holder, err := s.Accounting.SelectDataPoolHolder(userId, []string{})
 	if err != nil {
 		return nil, "", err
 	}

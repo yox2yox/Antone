@@ -40,6 +40,7 @@ var (
 	ErrDataPoolAlreadyExists     = errors.New("this user's datapool already exists")
 	ErrCreateDataPoolNotComplete = errors.New("failed to complete to create datepool")
 	ErrArgumentIsInvalid         = errors.New("an argument is invalid")
+	ErrFailedToComplete          = errors.New("Failed to complete work")
 )
 
 func NewService(withoutConnectRemoteForTest bool) *Service {
@@ -119,32 +120,79 @@ func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worke
 }
 
 //userIdのデータを保有しているHolderの中から一台選択して返す
-func (s *Service) SelectDataPoolHolder(userId string) (*Worker, error) {
+func (s *Service) SelectDataPoolHolder(userId string, exceptions []string) (Worker, error) {
+
 	rand.Seed(time.Now().UnixNano())
 	s.RLock()
 	holders, exist := s.Holders[userId]
 	s.RUnlock()
 	if exist == false || len(holders) <= 0 {
-		return nil, ErrDataPoolHolderNotExist
+		return Worker{}, ErrDataPoolHolderNotExist
 	}
-	s.RLock()
-	holderid := holders[rand.Intn(len(holders))]
-	rtnworkers := s.Workers[holderid]
-	s.RUnlock()
-	return rtnworkers, nil
+	if len(holders) < len(exceptions)+1 {
+		return Worker{}, ErrWorkersAreNotEnough
+	}
+
+	MAXTRY := len(holders) * 5
+
+	holderid := "holder"
+	var rtnworker Worker
+	continueloop := true
+	for i := 0; i < MAXTRY; i++ {
+		s.RLock()
+		holderid = holders[rand.Intn(len(holders))]
+		rtnworker = *s.Workers[holderid]
+		s.RUnlock()
+		continueloop = false
+		for _, exid := range exceptions {
+			if holderid == exid {
+				continueloop = true
+			}
+		}
+		if continueloop == false {
+			return rtnworker, nil
+		}
+	}
+	return Worker{}, ErrFailedToComplete
 }
 
-//データプールを削除
-func (s *Service) DeleteDatapoolAndHolder(userId string, workerId string) error {
+//リモートのデータプールを削除
+func (s *Service) DeleteDatapoolOnRemote(userId string, workerId string) error {
+	target, exist := s.Workers[workerId]
+	if !exist {
+		return ErrIDNotExist
+	}
+	conn, err := grpc.Dial(target.Addr, grpc.WithInsecure())
+	if err != nil {
+		return err
+	}
+	workerClient := workerpb.NewWorkerClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	deleteReq := &workerpb.DatapoolInfo{Userid: userId}
+	_, err = workerClient.DeleteDatapool(ctx, deleteReq)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+//ローカルのデータプールを削除
+func (s *Service) DeleteDatapoolAndHolderOnLocal(userId string, workerId string) error {
 	s.RLock()
 	_, exist := s.Holders[userId]
 	s.RUnlock()
 	if !exist {
 		return ErrDataPoolHolderNotExist
 	}
-	for _, id := range s.Holders[userId] {
+	holders := []string{}
+	s.RLock()
+	readholders := s.Holders[userId]
+	s.RUnlock()
+	for _, id := range readholders {
 		if id == workerId {
-			target, exist := s.Workers[userId]
+			target, exist := s.Workers[workerId]
 			if !exist {
 				return ErrIDNotExist
 			}
@@ -155,32 +203,51 @@ func (s *Service) DeleteDatapoolAndHolder(userId string, workerId string) error 
 					holds = append(holds, hold)
 				}
 			}
-			s.Workers[userId].Holdinds = holds
+			s.Workers[workerId].Holdinds = holds
+		} else {
+			holders = append(holders, id)
+		}
+	}
+	s.Lock()
+	s.Holders[userId] = holders
+	s.Unlock()
+	return nil
+}
 
-			conn, err := grpc.Dial(target.Addr, grpc.WithInsecure())
-			if err != nil {
-				return err
-			}
+//リモートワーカからデータを取得
+func (s *Service) FetcheDatapoolFromRemote(userId string) (data int32, failedRemotes []string, err error) {
+	maxtry := 20
+	exceptions := []string{}
+	for i := 0; i < maxtry; i++ {
+		holder, err := s.SelectDataPoolHolder(userId, exceptions)
+		if err != nil {
+			return 0, []string{}, err
+		}
+		conn, err := grpc.Dial(holder.Addr, grpc.WithInsecure())
+		if err != nil {
+			exceptions = append(exceptions, holder.Id)
+		} else {
 			workerClient := workerpb.NewWorkerClient(conn)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-
-			deleteReq := &workerpb.DatapoolInfo{Userid: userId}
-			_, err = workerClient.DeleteDatapool(ctx, deleteReq)
-			if err != nil {
-				return err
+			dpinfo := &workerpb.DatapoolInfo{Userid: userId}
+			datapool, err := workerClient.GetDatapool(ctx, dpinfo)
+			//TODO:データの検証
+			if err == nil {
+				return datapool.Data, []string{}, nil
+			} else {
+				exceptions = append(exceptions, holder.Id)
 			}
-			return nil
 		}
 	}
-	return ErrIDNotExist
+	return 0, []string{}, ErrFailedToComplete
+
 }
 
 //データプールを作成しHolderに登録する
-func (s *Service) CreateDatapoolAndSelectHolders(userId string, num int) ([]Worker, error) {
+func (s *Service) CreateDatapoolAndSelectHolders(userId string, data int32, num int) ([]Worker, error) {
 
-	//TODO:リモートから返信がなかった場合の処理
-	if num < 0 {
+	if num <= 0 {
 		return nil, ErrArgumentIsInvalid
 	}
 
@@ -223,7 +290,7 @@ func (s *Service) CreateDatapoolAndSelectHolders(userId string, num int) ([]Work
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 
-				datapoolInfo := &workerpb.DatapoolInfo{Userid: userId}
+				datapoolInfo := &workerpb.DatapoolInfo{Userid: userId, Data: data}
 				_, err = workerClient.CreateDatapool(ctx, datapoolInfo)
 				if err != nil {
 					return
@@ -248,6 +315,7 @@ func (s *Service) CreateDatapoolAndSelectHolders(userId string, num int) ([]Work
 	s.RLock()
 	holdersOriginal := s.Holders[userId]
 	s.RUnlock()
+	//TODO:リモートから返信がなかった場合の処理
 	if len(holdersOriginal) < num {
 		return holders, ErrCreateDataPoolNotComplete
 	}
@@ -290,7 +358,7 @@ func (s *Service) CreateNewClient(userId string) (*Client, error) {
 	if exist {
 		return nil, ErrIDAlreadyExists
 	}
-	_, err := s.CreateDatapoolAndSelectHolders(userId, 1)
+	_, err := s.CreateDatapoolAndSelectHolders(userId, 0, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -335,6 +403,7 @@ func (s *Service) UpdateDatapoolRemote(userId string, data int) error {
 	}
 
 	failedHolders := []string{}
+	mulocal := sync.Mutex{}
 
 	wg := sync.WaitGroup{}
 
@@ -344,7 +413,9 @@ func (s *Service) UpdateDatapoolRemote(userId string, data int) error {
 			defer wg.Done()
 			conn, err := grpc.Dial(target.Addr, grpc.WithInsecure())
 			if err != nil {
+				mulocal.Lock()
 				failedHolders = append(failedHolders, target.Id)
+				mulocal.Unlock()
 				return
 			}
 			defer conn.Close()
@@ -357,7 +428,9 @@ func (s *Service) UpdateDatapoolRemote(userId string, data int) error {
 			}
 			_, err = workerClient.UpdateDatapool(ctx, datapoolUpdate)
 			if err != nil {
+				mulocal.Lock()
 				failedHolders = append(failedHolders, target.Id)
+				mulocal.Unlock()
 				return
 			}
 		}(holder)
@@ -365,7 +438,16 @@ func (s *Service) UpdateDatapoolRemote(userId string, data int) error {
 
 	wg.Wait()
 
-	//TODO:エラーを出したホルダーを新規ホルダーに交換
+	//エラーを出したデータプールホルダーを交換
+	for _, holderid := range failedHolders {
+		s.DeleteDatapoolAndHolderOnLocal(userId, holderid)
+		if !s.WithoutConnectRemoteForTest {
+			s.DeleteDatapoolOnRemote(userId, holderid)
+		}
+	}
+	if len(failedHolders) > 0 {
+		s.CreateDatapoolAndSelectHolders(userId, int32(data), len(failedHolders))
+	}
 
 	return nil
 
