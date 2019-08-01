@@ -33,8 +33,8 @@ func UpServer() (*grpc.Server, net.Listener, error) {
 	return grpcServer, lis, nil
 }
 
-//データプールの作成に成功するか
-func TestWorkerEndpoint_CreateNewDataPool_Success(t *testing.T) {
+//データプールの作成と取得に成功するか
+func TestWorkerEndpoint_CreateNewDataPoolAndGet(t *testing.T) {
 	//サーバー部
 	datapool := datapool.NewService()
 	grpcServer, listen, err := UpServer()
@@ -59,12 +59,29 @@ func TestWorkerEndpoint_CreateNewDataPool_Success(t *testing.T) {
 	client := pb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	getResult, err := client.GetDatapool(ctx, &pb.DatapoolInfo{Userid: testUserId})
+	if err == nil {
+		t.Fatalf("want has error,but nil")
+	}
+
 	createResult, err := client.CreateDatapool(ctx, &pb.DatapoolInfo{Userid: testUserId})
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
 	}
 	if createResult == nil {
 		t.Fatalf("failed test updateResult is nil")
+	}
+
+	getResult, err = client.GetDatapool(ctx, &pb.DatapoolInfo{Userid: testUserId})
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+	if getResult == nil {
+		t.Fatalf("want gotten datapool is no nil,but nil")
+	}
+	if getResult.Data != 0 {
+		t.Fatalf("want gotten datapool is 0,but %#v", getResult.Data)
 	}
 }
 

@@ -43,6 +43,15 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 	return &pb.ValidationResult{Pool: pool, Reject: false}, nil
 }
 
+func (e *Endpoint) GetDatapool(ctx context.Context, datapoolInfo *pb.DatapoolInfo) (*pb.DatapoolInfo, error) {
+	data, err := e.Datapool.GetDataPool(datapoolInfo.Userid)
+	if err != nil {
+		return nil, err
+	}
+	rtnpoolinfo := &pb.DatapoolInfo{Userid: datapoolInfo.Userid, Data: data}
+	return rtnpoolinfo, nil
+}
+
 func (e *Endpoint) UpdateDatapool(ctx context.Context, datapoolUpdate *pb.DatapoolUpdate) (*pb.UpdateResult, error) {
 	err := e.Datapool.SetDataPool(datapoolUpdate.Userid, datapoolUpdate.Pool)
 	if err == datapool.ErrDataPoolNotExist {
