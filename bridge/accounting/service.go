@@ -392,6 +392,22 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool) (int, error)
 
 }
 
+func (s *Service) SwapDatapoolHolders(userId string, data int32, oldHolders []string) error {
+	for _, holderid := range oldHolders {
+		s.DeleteDatapoolAndHolderOnLocal(userId, holderid)
+		if !s.WithoutConnectRemoteForTest {
+			s.DeleteDatapoolOnRemote(userId, holderid)
+		}
+	}
+	if len(oldHolders) > 0 {
+		_, err := s.CreateDatapoolAndSelectHolders(userId, int32(data), len(oldHolders))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 //リモートワーカのデータプールを更新する
 func (s *Service) UpdateDatapoolRemote(userId string, data int) error {
 	holders, err := s.GetDatapoolHolders(userId)
@@ -439,15 +455,7 @@ func (s *Service) UpdateDatapoolRemote(userId string, data int) error {
 	wg.Wait()
 
 	//エラーを出したデータプールホルダーを交換
-	for _, holderid := range failedHolders {
-		s.DeleteDatapoolAndHolderOnLocal(userId, holderid)
-		if !s.WithoutConnectRemoteForTest {
-			s.DeleteDatapoolOnRemote(userId, holderid)
-		}
-	}
-	if len(failedHolders) > 0 {
-		s.CreateDatapoolAndSelectHolders(userId, int32(data), len(failedHolders))
-	}
+	s.SwapDatapoolHolders(userId, int32(data), failedHolders)
 
 	return nil
 
