@@ -43,7 +43,7 @@ func (e *Endpoint) RequestValidatableCode(ctx context.Context, vCodeRequest *pb.
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	e.Orders.AddValidationRequest(e.PickNum, holderId, vcode)
+	e.Orders.AddValidationRequest(vCodeRequest.Userid, e.PickNum, holderId, vcode)
 
 	return vcode, nil
 

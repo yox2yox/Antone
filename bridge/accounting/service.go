@@ -409,7 +409,7 @@ func (s *Service) SwapDatapoolHolders(userId string, data int32, oldHolders []st
 }
 
 //リモートワーカのデータプールを更新する
-func (s *Service) UpdateDatapoolRemote(userId string, data int) error {
+func (s *Service) UpdateDatapoolRemote(userId string, data int32) error {
 	holders, err := s.GetDatapoolHolders(userId)
 	if err != nil {
 		return err
@@ -455,7 +455,7 @@ func (s *Service) UpdateDatapoolRemote(userId string, data int) error {
 	wg.Wait()
 
 	//エラーを出したデータプールホルダーを交換
-	s.SwapDatapoolHolders(userId, int32(data), failedHolders)
+	s.SwapDatapoolHolders(userId, data, failedHolders)
 
 	return nil
 

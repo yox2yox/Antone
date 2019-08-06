@@ -18,6 +18,7 @@ var (
 )
 
 type ValidationRequest struct {
+	UserId          string
 	Neednum         int
 	HolderId        string
 	ValidatableCode *pb.ValidatableCode
@@ -110,8 +111,8 @@ func (s *Service) dequeueValidationRequest() *ValidationRequest {
 	return tmp
 }
 
-func (s *Service) AddValidationRequest(needNum int, holderId string, vcode *pb.ValidatableCode) {
-	vreq := &ValidationRequest{Neednum: needNum, HolderId: holderId, ValidatableCode: vcode}
+func (s *Service) AddValidationRequest(userId string, needNum int, holderId string, vcode *pb.ValidatableCode) {
+	vreq := &ValidationRequest{UserId: userId, Neednum: needNum, HolderId: holderId, ValidatableCode: vcode}
 	s.Lock()
 	s.ValidationRequests = append(s.ValidationRequests, vreq)
 	s.Unlock()
@@ -285,12 +286,13 @@ func (s *Service) Run() {
 					ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 					defer cancel()
 					results, conclusion, _ := s.ValidateCode(ctx, vreq.Neednum, vreq.HolderId, vreq.ValidatableCode)
+					//結果から評価値を登録
 					if results != nil {
 						s.commitReputation(vreq.HolderId, results, conclusion)
 					}
-					//TODO:結果を記録，送信
+					//結果を送信
 					if conclusion != nil && conclusion.IsRejected == false {
-
+						s.Accounting.UpdateDatapoolRemote(vreq.UserId, conclusion.Data)
 					}
 				}()
 			}
