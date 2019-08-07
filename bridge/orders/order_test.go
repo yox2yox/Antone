@@ -154,6 +154,11 @@ func TestGetValidatableCode(t *testing.T) {
 
 func TestServiceRunAndStop(t *testing.T) {
 	accounting := accounting.NewService(true)
+	for _, worker := range testWorkersId {
+		accounting.CreateNewWorker(worker, testWorkerAddr)
+	}
+	accounting.CreateNewClient(testClientId)
+
 	order := NewService(accounting, true)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -161,7 +166,7 @@ func TestServiceRunAndStop(t *testing.T) {
 		order.Run()
 		wg.Done()
 	}()
-	order.AddValidationRequest(1, testClientId, &pb.ValidatableCode{Data: 0, Add: 0})
+	order.AddValidationRequest(testClientId, 1, testClientId, &pb.ValidatableCode{Data: 0, Add: 0})
 	time.Sleep(3 * time.Second)
 	order.Stop()
 	wg.Wait()

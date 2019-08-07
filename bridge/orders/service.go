@@ -34,6 +34,7 @@ type ValidationResult struct {
 type Service struct {
 	sync.RWMutex
 	ValidationRequests          []*ValidationRequest
+	WaitingRequestsId           []string
 	Accounting                  *accounting.Service
 	Running                     bool
 	WithoutConnectRemoteForTest bool
@@ -282,19 +283,35 @@ func (s *Service) Run() {
 			if len(s.ValidationRequests) > 0 {
 				fmt.Println("get item")
 				vreq := s.dequeueValidationRequest()
-				go func() {
-					ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-					defer cancel()
-					results, conclusion, _ := s.ValidateCode(ctx, vreq.Neednum, vreq.HolderId, vreq.ValidatableCode)
-					//結果から評価値を登録
-					if results != nil {
-						s.commitReputation(vreq.HolderId, results, conclusion)
+
+				//現在処理が実行中か？
+				waiting := false
+				for _, id := range s.WaitingRequestsId {
+					if id == vreq.UserId {
+						waiting = true
 					}
-					//結果を送信
-					if conclusion != nil && conclusion.IsRejected == false {
-						s.Accounting.UpdateDatapoolRemote(vreq.UserId, conclusion.Data)
-					}
-				}()
+				}
+
+				if waiting == false {
+					go func() {
+						ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+						defer cancel()
+						results, conclusion, _ := s.ValidateCode(ctx, vreq.Neednum, vreq.HolderId, vreq.ValidatableCode)
+						//結果から評価値を登録
+						if results != nil {
+							s.commitReputation(vreq.HolderId, results, conclusion)
+						}
+						//結果を送信
+						if conclusion != nil && conclusion.IsRejected == false {
+							s.Accounting.UpdateDatapoolRemote(vreq.UserId, conclusion.Data)
+						}
+					}()
+				} else {
+					//取り出したリクエストを待ち行列に戻す
+					s.Lock()
+					s.ValidationRequests = append(s.ValidationRequests, vreq)
+					s.Unlock()
+				}
 			}
 		}
 	}
