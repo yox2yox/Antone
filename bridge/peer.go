@@ -64,12 +64,19 @@ func (p *Peer) Run(ctx context.Context) error {
 		}
 		return err
 	})
+	group.Go(func() error {
+		p.Orders.Run()
+		return nil
+	})
 	return group.Wait()
 }
 
 func (p *Peer) Close() error {
 	if p.GrpcServer != nil {
 		p.GrpcServer.Stop()
+	}
+	if p.Orders != nil {
+		p.Orders.Stop()
 	}
 	if p.Listener != nil {
 		err := (*p.Listener).Close()
