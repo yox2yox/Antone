@@ -25,8 +25,8 @@ func Test_CreateNetWork(t *testing.T) {
 		"worker4",
 		"worker5",
 	}
-	workersAddr := "localhost"
-	workersBasePort := 10000
+	workersAddr := "127.0.0.1"
+	workersBasePort := 10001
 
 	var wpeers []*wPeer.Peer
 
@@ -46,6 +46,7 @@ func Test_CreateNetWork(t *testing.T) {
 			t.Fatalf("want no error, but has error %#v", err)
 		}
 	}()
+	defer bpeer.Close()
 	defer cancelBridge()
 
 	//ワーカPeer起動
@@ -57,6 +58,7 @@ func Test_CreateNetWork(t *testing.T) {
 		workerConfig.Server.Addr = workersAddr + ":" + strconv.Itoa(workersBasePort+i)
 		wpeer, err := wPeer.New(workerConfig.Server, false)
 		if err != nil {
+			t.Log(workerConfig.Server.Addr)
 			t.Fatalf("want no error, but has error %#v", err)
 		}
 		wpeers = append(wpeers, wpeer)
@@ -68,6 +70,7 @@ func Test_CreateNetWork(t *testing.T) {
 			}
 		}()
 		defer cancelworker()
+		defer wpeer.Close()
 	}
 
 	//ブリッジクライアント作成
@@ -103,14 +106,20 @@ func Test_CreateNetWork(t *testing.T) {
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
 	}
+
+	//データが登録されているかチェック
+	countholder := 0
 	for _, wpeer := range wpeers {
 		data, err := wpeer.DataPool.GetDataPool(clientId)
-		if err != nil {
-			t.Fatalf("want no error,but error %#v", err)
+		if err == nil {
+			countholder += 1
+			if data != 0 {
+				t.Fatalf("want user's data==0,but %#v", data)
+			}
 		}
-		if data != 0 {
-			t.Fatalf("want user's data==0,but %#v", data)
-		}
+	}
+	if countholder < 1 {
+		t.Fatalf("want holders count is 1 ,but %#v", countholder)
 	}
 
 	t.Log("Start to get validatable code")
@@ -129,5 +138,20 @@ func Test_CreateNetWork(t *testing.T) {
 	}
 
 	time.Sleep(3 * time.Second)
+
+	//データが更新されているかチェック
+	countholder = 0
+	for _, wpeer := range wpeers {
+		data, err := wpeer.DataPool.GetDataPool(clientId)
+		if err == nil {
+			countholder += 1
+			if data != 1 {
+				t.Fatalf("want user's data==1,but %#v", data)
+			}
+		}
+	}
+	if countholder < 1 {
+		t.Fatalf("want holders count is 1 ,but %#v", countholder)
+	}
 
 }
