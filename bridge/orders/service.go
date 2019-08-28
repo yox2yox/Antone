@@ -113,10 +113,12 @@ func (s *Service) dequeueValidationRequest() *ValidationRequest {
 }
 
 func (s *Service) AddValidationRequest(userId string, needNum int, holderId string, vcode *pb.ValidatableCode) {
+	fmt.Printf("DEBUG %s [] A ValidationRequest is added to orders.service\n", time.Now().String())
 	vreq := &ValidationRequest{UserId: userId, Neednum: needNum, HolderId: holderId, ValidatableCode: vcode}
 	s.Lock()
 	s.ValidationRequests = append(s.ValidationRequests, vreq)
 	s.Unlock()
+	fmt.Printf("DEBUG %s [] Waiting ValidationRequests count is %d\n", time.Now().String(), len(s.ValidationRequests))
 }
 
 //結果リストから、必要な追加ワーカ数および最も多数だった結果を返す
@@ -278,10 +280,11 @@ func (s *Service) Run() {
 	for {
 		select {
 		case <-s.stopChan:
+			fmt.Printf("INFO %s [] OrdersServer has been stoped\n", time.Now())
 			return
 		default:
 			if len(s.ValidationRequests) > 0 {
-				fmt.Println("get item")
+				fmt.Printf("DEBUG %s [] Got order to validate\n", time.Now())
 				vreq := s.dequeueValidationRequest()
 
 				//現在処理が実行中か？
@@ -299,6 +302,7 @@ func (s *Service) Run() {
 						results, conclusion, _ := s.ValidateCode(ctx, vreq.Neednum, vreq.HolderId, vreq.ValidatableCode)
 						//結果から評価値を登録
 						if results != nil {
+							fmt.Printf("INFO %s [] END - Validations by remote workers",time.Now())
 							s.commitReputation(vreq.HolderId, results, conclusion)
 						}
 						//結果を送信
