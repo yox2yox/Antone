@@ -142,7 +142,9 @@ func TestGetValidatableCode(t *testing.T) {
 		t.Fatalf("want no error,but has error %#v", err)
 	}
 	order := NewService(accounting, true)
-	vcode, _, err := order.GetValidatableCode(testClientId, 1)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	vcode, _, err := order.GetValidatableCode(ctx, testClientId, 1)
 	if err != nil {
 		t.Fatalf("want no error,but has error %#v", err)
 	}

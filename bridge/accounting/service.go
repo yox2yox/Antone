@@ -3,6 +3,7 @@ package accounting
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -280,6 +281,7 @@ func (s *Service) CreateDatapoolAndSelectHolders(userId string, data int32, num 
 		if !s.WithoutConnectRemoteForTest {
 			//RemoteワーカにCreateDatapoolリクエスト送信
 			wg.Add(1)
+			fmt.Printf("INFO %s [] START - Send create datapool reqeust to %s %s\n", time.Now(), worker.Id, worker.Addr)
 			go func(target *Worker) {
 				defer wg.Done()
 				conn, err := grpc.Dial(target.Addr, grpc.WithInsecure())
@@ -293,12 +295,14 @@ func (s *Service) CreateDatapoolAndSelectHolders(userId string, data int32, num 
 				datapoolInfo := &workerpb.DatapoolInfo{Userid: userId, Data: data}
 				_, err = workerClient.CreateDatapool(ctx, datapoolInfo)
 				if err != nil {
+					fmt.Printf("ERROR %s [] Failed to create datapool on remote %s %s caused by %#v\n", time.Now(), target.Id, target.Addr, err)
 					return
 				}
 				s.Lock()
 				s.Holders[userId] = append(s.Holders[userId], target.Id)
 				s.Workers[target.Id].Holdinds = append(s.Workers[target.Id].Holdinds, userId)
 				s.Unlock()
+				fmt.Printf("INFO %s [] END - Success to create datapool on %s %s\n", time.Now(), target.Id, target.Addr)
 			}(worker)
 		} else {
 			s.Lock()
