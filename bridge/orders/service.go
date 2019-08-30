@@ -51,6 +51,18 @@ func NewService(accounting *accounting.Service, withoutConnectRemoteForTest bool
 	}
 }
 
+func (s *Service) IsTheDatapoolAvailable(userId string) bool {
+	s.RLock()
+	available := true
+	for _, id := range s.WaitingRequestsId {
+		if id == userId {
+			available = false
+		}
+	}
+	s.RUnlock()
+	return available
+}
+
 func (s *Service) getValidatableCodeRemote(holder accounting.Worker, userId string, add int32) (*pb.ValidatableCode, error) {
 	conn, err := grpc.Dial(holder.Addr, grpc.WithInsecure())
 	client := workerpb.NewWorkerClient(conn)
@@ -70,21 +82,29 @@ func (s *Service) getValidatableCodeRemote(holder accounting.Worker, userId stri
 }
 
 //ValidatableCodeを取得する
-func (s *Service) GetValidatableCode(userId string, add int32) (*pb.ValidatableCode, string, error) {
+func (s *Service) GetValidatableCode(ctx context.Context, userId string, add int32) (*pb.ValidatableCode, string, error) {
+	//データプールが利用可能になるまで無限ループ
+	for s.IsTheDatapoolAvailable(userId) == false {
+		select {
+		case <-ctx.Done():
+			return nil, "", nil
+		default:
+		}
+	}
 	holder, err := s.Accounting.SelectDataPoolHolder(userId, []string{})
 	if err != nil {
 		return nil, "", err
 	}
 	var vcode *pb.ValidatableCode
-	if !s.WithoutConnectRemoteForTest {
-		vcode, err = s.getValidatableCodeRemote(holder, userId, add)
-		if err != nil {
-			return nil, holder.Id, err
-		}
-	} else {
+	if s.WithoutConnectRemoteForTest {
 		vcode = &pb.ValidatableCode{
 			Data: 0,
 			Add:  add,
+		}
+	} else {
+		vcode, err = s.getValidatableCodeRemote(holder, userId, add)
+		if err != nil {
+			return nil, holder.Id, err
 		}
 	}
 	return vcode, holder.Id, nil
@@ -119,6 +139,29 @@ func (s *Service) AddValidationRequest(userId string, needNum int, holderId stri
 	s.ValidationRequests = append(s.ValidationRequests, vreq)
 	s.Unlock()
 	fmt.Printf("DEBUG %s [] Waiting ValidationRequests count is %d\n", time.Now().String(), len(s.ValidationRequests))
+}
+
+//waitlistに追加
+func (s *Service) addWaitingList(userId string) {
+	s.Lock()
+	s.WaitingRequestsId = append(s.WaitingRequestsId, userId)
+	s.Unlock()
+}
+
+//waitlistから削除
+func (s *Service) removeWaitingList(userId string) {
+	newlist := []string{}
+	s.RLock()
+	for _, waitId := range s.WaitingRequestsId {
+		if waitId != userId {
+			newlist = append(newlist, waitId)
+		}
+	}
+	s.RUnlock()
+
+	s.Lock()
+	s.WaitingRequestsId = newlist
+	s.Unlock()
 }
 
 //結果リストから、必要な追加ワーカ数および最も多数だった結果を返す
@@ -285,35 +328,42 @@ func (s *Service) Run() {
 		default:
 			if len(s.ValidationRequests) > 0 {
 				fmt.Printf("DEBUG %s [] Got order to validate\n", time.Now())
-				vreq := s.dequeueValidationRequest()
 
-				//現在処理が実行中か？
-				waiting := false
-				for _, id := range s.WaitingRequestsId {
-					if id == vreq.UserId {
-						waiting = true
+				//利用可能なリクエストが出てくるまでループ
+				waitingvreq := []*ValidationRequest{}
+				available := false
+				var vreq *ValidationRequest = nil
+				for available == false {
+					vreq = s.dequeueValidationRequest()
+					available = s.IsTheDatapoolAvailable(vreq.UserId)
+					if available == false {
+						waitingvreq = append(waitingvreq, vreq)
 					}
 				}
 
-				if waiting == false {
+				if vreq != nil && available == true {
+					//WaitingListに追加
+					s.addWaitingList(vreq.UserId)
 					go func() {
 						ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 						defer cancel()
 						results, conclusion, _ := s.ValidateCode(ctx, vreq.Neednum, vreq.HolderId, vreq.ValidatableCode)
 						//結果から評価値を登録
 						if results != nil {
-							fmt.Printf("INFO %s [] END - Validations by remote workers",time.Now())
+							fmt.Printf("INFO %s [] END - Validations by remote workers", time.Now())
 							s.commitReputation(vreq.HolderId, results, conclusion)
 						}
 						//結果を送信
 						if conclusion != nil && conclusion.IsRejected == false {
 							s.Accounting.UpdateDatapoolRemote(vreq.UserId, conclusion.Data)
 						}
+						//WaingListから削除
+						s.removeWaitingList(vreq.UserId)
 					}()
 				} else {
 					//取り出したリクエストを待ち行列に戻す
 					s.Lock()
-					s.ValidationRequests = append(s.ValidationRequests, vreq)
+					s.ValidationRequests = append(waitingvreq, s.ValidationRequests...)
 					s.Unlock()
 				}
 			}

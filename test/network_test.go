@@ -154,4 +154,71 @@ func Test_CreateNetWork(t *testing.T) {
 		t.Fatalf("want holders count is 1 ,but %#v", countholder)
 	}
 
+	//加算連続
+	vCodeRequest = &bpb.ValidatableCodeRequest{Userid: clientId, Add: 1}
+	vCode, err = clientOrder.RequestValidatableCode(ctxOrder, vCodeRequest)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+	if vCode == nil {
+		t.Fatalf("want validatable code is not nil,but nil")
+	}
+	if vCode.Data != 1 {
+		t.Fatalf("want vcode.data == 1,but %#v", vCode.Data)
+	}
+
+	vCodeRequest = &bpb.ValidatableCodeRequest{Userid: clientId, Add: 2}
+	vCode, err = clientOrder.RequestValidatableCode(ctxOrder, vCodeRequest)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+	if vCode == nil {
+		t.Fatalf("want validatable code is not nil,but nil")
+	}
+	if vCode.Data != 2 {
+		t.Fatalf("want vcode.data == 2,but %#v", vCode.Data)
+	}
+
+	vCodeRequest = &bpb.ValidatableCodeRequest{Userid: clientId, Add: 3}
+	vCode, err = clientOrder.RequestValidatableCode(ctxOrder, vCodeRequest)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+	if vCode == nil {
+		t.Fatalf("want validatable code is not nil,but nil")
+	}
+	if vCode.Data != 4 {
+		t.Fatalf("want vcode.data == 4,but %#v", vCode.Data)
+	}
+
+	vCodeRequest = &bpb.ValidatableCodeRequest{Userid: clientId, Add: 4}
+	vCode, err = clientOrder.RequestValidatableCode(ctxOrder, vCodeRequest)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+	if vCode == nil {
+		t.Fatalf("want validatable code is not nil,but nil")
+	}
+	if vCode.Data != 7 {
+		t.Fatalf("want vcode.data == 7,but %#v", vCode.Data)
+	}
+
+	//バリデーションが完了するまで待機
+	time.Sleep(3 * time.Second)
+
+	//データが更新されているかチェック
+	countholder = 0
+	for _, wpeer := range wpeers {
+		data, err := wpeer.DataPool.GetDataPool(clientId)
+		if err == nil {
+			countholder += 1
+			if data != 11 {
+				t.Fatalf("want user's data==11,but %#v", data)
+			}
+		}
+	}
+	if countholder < 1 {
+		t.Fatalf("want holders count is 1 ,but %#v", countholder)
+	}
+
 }
