@@ -62,7 +62,7 @@ func Test_CreateNetWork(t *testing.T) {
 			t.Fatalf("want no error, but has error %#v", err)
 		}
 		workerConfig.Server.Addr = workersAddr + ":" + strconv.Itoa(workersBasePort+i)
-		wpeer, err := wPeer.New(workerConfig.Server, false)
+		wpeer, err := wPeer.New(workerConfig, false)
 		if err != nil {
 			t.Log(workerConfig.Server.Addr)
 			t.Fatalf("want no error, but has error %#v", err)
@@ -102,7 +102,7 @@ func Test_CreateNetWork(t *testing.T) {
 
 	//各種アカウント登録
 	for i, workerId := range workersId {
-		_, err = bpeer.Accounting.CreateNewWorker(workerId, wpeers[i].ServerConfig.Addr)
+		_, err = bpeer.Accounting.CreateNewWorker(workerId, wpeers[i].WorkerConfig.Server.Addr)
 		if err != nil {
 			t.Fatalf("want no error,but error %#v", err)
 		}

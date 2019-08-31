@@ -5,47 +5,61 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
-	"yox2yox/antone/bridge"
-	"yox2yox/antone/bridge/config"
+	"yox2yox/antone/internal/log2"
+	"yox2yox/antone/worker"
+	"yox2yox/antone/worker/config"
 )
 
 func main() {
 
-	config, err := config.ReadBridgeConfig()
+	errch := make(chan struct{})
+
+	log2.Debug.Println("start main function")
+	config, err := config.ReadWorkerConfig()
 	if err != nil {
-		fmt.Printf("FATAL %s [] Failed to read config", time.Now())
+		log2.Err.Println("failed to read config")
+		return
 	}
-	peer, err := bridge.New(config, false)
+	peer, err := worker.New(config, false)
 	if err != nil {
-		fmt.Printf("FATAL %s [] Failed to initialize peer", time.Now())
+		log2.Err.Println("failed to initialize peer")
+		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() {
 		err = peer.Run(ctx)
 		if err != nil {
-			fmt.Printf("FATAL %s [] Peer was killed %#v", time.Now(), err)
+			log2.Err.Printf("peer was killed \n%#v\n", err)
 		}
+		close(errch)
 	}()
 
 	//コマンドをスキャン
 	scanner := bufio.NewScanner(os.Stdin)
 	stoped := false
-	fmt.Printf("Antone > ")
-	for stoped == false && scanner.Scan() {
-		cmd := scanner.Text()
-		switch cmd {
-		case "stop":
-			stoped = true
-			break
-		default:
-			fmt.Printf("%s: command not found\n", cmd)
+	go func() {
+		fmt.Printf("Antone > ")
+		for stoped == false && scanner.Scan() {
+			cmd := scanner.Text()
+			switch cmd {
+			case "stop":
+				stoped = true
+				break
+			default:
+				fmt.Printf("%s: command not found\n", cmd)
+			}
+			if stoped == false {
+				fmt.Printf("Antone > ")
+			}
 		}
-		if stoped == false {
-			fmt.Printf("Antone > ")
-		}
+	}()
+
+	select {
+	case <-errch:
+		log2.Debug.Println("clossing peer...")
+		peer.Close()
+		return
 	}
-	peer.Close()
 
 }

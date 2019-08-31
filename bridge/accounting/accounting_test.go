@@ -419,7 +419,7 @@ func TestServiceWithRemoteWorker(t *testing.T) {
 		if err != nil {
 			t.Fatalf("want no error,but error %#v", err)
 		}
-		peer, err := worker.New(conf.Server, false)
+		peer, err := worker.New(conf, false)
 		if err != nil {
 			t.Fatalf("want no error,but error %#v", err)
 		}

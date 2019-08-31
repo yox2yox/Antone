@@ -2,8 +2,14 @@ package worker
 
 import (
 	"context"
+	"crypto/rand"
+	"fmt"
+	"math/big"
 	"net"
 	"net/http"
+	"time"
+	bpb "yox2yox/antone/bridge/pb"
+	"yox2yox/antone/internal/log2"
 	config "yox2yox/antone/worker/config"
 	"yox2yox/antone/worker/datapool"
 	pb "yox2yox/antone/worker/pb"
@@ -14,21 +20,21 @@ import (
 )
 
 type Peer struct {
-	ServerConfig *config.ServerConfig
+	WorkerConfig *config.WorkerConfig
 	Listener     *net.Listener
 	GrpcServer   *grpc.Server
 	DataPool     *datapool.Service
 }
 
-func New(config *config.ServerConfig, debug bool) (*Peer, error) {
+func New(config *config.WorkerConfig, debug bool) (*Peer, error) {
 	peer := &Peer{}
 
 	{ //setup config
-		peer.ServerConfig = config
+		peer.WorkerConfig = config
 	}
 
 	{ //setup Server
-		lis, err := net.Listen("tcp", peer.ServerConfig.Addr)
+		lis, err := net.Listen("tcp", peer.WorkerConfig.Server.Addr)
 		if err != nil {
 			return nil, err
 		}
@@ -49,7 +55,35 @@ func New(config *config.ServerConfig, debug bool) (*Peer, error) {
 }
 
 func (p *Peer) Run(ctx context.Context) error {
+	//Workerのサインアップ
+	if p.WorkerConfig.Bridge.AccountId == "" {
+		connBridge, err := grpc.Dial(p.WorkerConfig.Bridge.Addr, grpc.WithInsecure())
+		if err != nil {
+			return err
+		}
+		defer connBridge.Close()
+		clientAccount := bpb.NewAccountingClient(connBridge)
+		ctxAccount, accountCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer accountCancel()
+		max := new(big.Int)
+		max.SetInt64(int64(p.WorkerConfig.Bridge.AccountRandMax))
+		n, err := rand.Int(rand.Reader, max)
+		if err != nil {
+			return err
+		}
+		accountid := fmt.Sprint(n.Int64())
+		reqSignup := &bpb.SignupWorkerRequest{Id: accountid}
+		_, err = clientAccount.SignupWorker(ctxAccount, reqSignup)
+		log2.Debug.Printf("an account has been created (id:%s)", accountid)
+		if err != nil {
+			return err
+		}
+	}
+
+	//各種サービス起動
 	group, ctx := errgroup.WithContext(ctx)
+
+	//サーバー待ち受け開始
 	group.Go(func() error {
 		err := p.GrpcServer.Serve(*p.Listener)
 		if err == context.Canceled || err == grpc.ErrServerStopped || err == http.ErrServerClosed {
@@ -57,6 +91,7 @@ func (p *Peer) Run(ctx context.Context) error {
 		}
 		return err
 	})
+
 	return group.Wait()
 }
 
