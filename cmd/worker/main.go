@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"os"
 	"time"
-	"yox2yox/antone/worker"
-	"yox2yox/antone/worker/config"
+	"yox2yox/antone/bridge"
+	"yox2yox/antone/bridge/config"
 )
 
 func main() {
 
-	config, err := config.ReadWorkerConfig()
+	config, err := config.ReadBridgeConfig()
 	if err != nil {
 		fmt.Printf("FATAL %s [] Failed to read config", time.Now())
 	}
-	peer, err := worker.New(config.Server, false)
+	peer, err := bridge.New(config, false)
 	if err != nil {
 		fmt.Printf("FATAL %s [] Failed to initialize peer", time.Now())
 	}
