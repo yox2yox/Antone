@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"yox2yox/antone/internal/log2"
@@ -12,10 +13,16 @@ import (
 
 func main() {
 
+	flag.Parse()
+	args := flag.Args()
+
 	errch := make(chan struct{})
 
 	log2.Debug.Println("start main function")
 	config, err := config.ReadWorkerConfig()
+	if len(args) > 1 && args[0] != "" {
+		config.Bridge.AccountId = args[0]
+	}
 	if err != nil {
 		log2.Err.Println("failed to read config")
 		return
@@ -45,6 +52,7 @@ func main() {
 			switch cmd {
 			case "stop":
 				stoped = true
+				close(errch)
 				break
 			default:
 				fmt.Printf("%s: command not found\n", cmd)

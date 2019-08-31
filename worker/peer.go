@@ -72,12 +72,13 @@ func (p *Peer) Run(ctx context.Context) error {
 			return err
 		}
 		accountid := fmt.Sprint(n.Int64())
-		reqSignup := &bpb.SignupWorkerRequest{Id: accountid}
+		reqSignup := &bpb.SignupWorkerRequest{Id: accountid, Addr: p.WorkerConfig.Server.Addr}
 		_, err = clientAccount.SignupWorker(ctxAccount, reqSignup)
-		log2.Debug.Printf("an account has been created (id:%s)", accountid)
 		if err != nil {
+			log2.Err.Printf("failed to signup worker\n%#v\n\tworker/peer.go", err)
 			return err
 		}
+		log2.Debug.Printf("an account has been created (id:%s)", accountid)
 	}
 
 	//各種サービス起動

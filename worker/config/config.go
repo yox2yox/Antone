@@ -23,10 +23,10 @@ func ReadWorkerConfig() (*WorkerConfig, error) {
 	config.Server = &ServerConfig{}
 	config.Bridge = &BridgeConnectionConfig{}
 
-	config.Server.Addr = "127.0.0.1:10001"
+	config.Server.Addr = "localhost:10001"
 	config.Server.Port = "10001"
 
-	config.Bridge.Addr = "127.0.0.1:10000"
+	config.Bridge.Addr = "localhost:10000"
 	config.Bridge.Port = "10000"
 	config.Bridge.AccountId = ""
 	config.Bridge.AccountRandMax = 100000

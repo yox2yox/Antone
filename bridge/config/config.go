@@ -20,7 +20,7 @@ func ReadBridgeConfig() (*BridgeConfig, error) {
 
 	config.Server = &ServerConfig{}
 
-	config.Server.Addr = "127.0.0.1:10000"
+	config.Server.Addr = "localhost:10000"
 	config.Server.Port = "10000"
 
 	config.Order = &OrderConfig{}

@@ -44,6 +44,7 @@ func New(config *config.BridgeConfig, debug bool) (*Peer, error) {
 
 	{ //setup Accounting
 		peer.Accounting = accounting.NewService(debug)
+		pb.RegisterAccountingServer(peer.GrpcServer, accounting.NewEndpoint(peer.Accounting))
 	}
 
 	{ //setup orders
