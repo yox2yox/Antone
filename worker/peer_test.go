@@ -32,7 +32,7 @@ func InitPeer() (*worker.Peer, error) {
 	if err != nil {
 		return nil, err
 	}
-	peer, err := worker.New(config.Server, true)
+	peer, err := worker.New(config, true)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +52,8 @@ func TestPeerInit(t *testing.T) {
 	if peer.GrpcServer == nil {
 		t.Fatalf("failed init peer GrpcServer is nil")
 	}
-	if peer.ServerConfig == nil {
-		t.Fatalf("failed init peer ServerConfig is nil")
+	if peer.WorkerConfig == nil {
+		t.Fatalf("failed init peer WorkerConfig is nil")
 	}
 	if peer.Listener == nil {
 		t.Fatalf("failed init peer Listener is nil")
@@ -103,7 +103,7 @@ func TestWorkerEndpoint_ResponseValidatableCode(t *testing.T) {
 	defer cancel()
 	defer peer.Close()
 
-	conn, err := grpc.Dial(peer.ServerConfig.Addr, grpc.WithInsecure())
+	conn, err := grpc.Dial(peer.WorkerConfig.Server.Addr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed to get connection %#v", err)
 	}
@@ -146,7 +146,7 @@ func TestWorkerEndpoint_Validate(t *testing.T) {
 	defer cancel()
 	defer peer.Close()
 
-	conn, err := grpc.Dial(peer.ServerConfig.Addr, grpc.WithInsecure())
+	conn, err := grpc.Dial(peer.WorkerConfig.Server.Addr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
 	}
@@ -185,7 +185,7 @@ func TestWorkerEndpoint_UpdateDb(t *testing.T) {
 	defer cancel()
 	defer peer.Close()
 
-	conn, err := grpc.Dial(peer.ServerConfig.Addr, grpc.WithInsecure())
+	conn, err := grpc.Dial(peer.WorkerConfig.Server.Addr, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
 	}

@@ -20,14 +20,19 @@ import (
 )
 
 type Peer struct {
-	WorkerConfig *config.WorkerConfig
-	Listener     *net.Listener
-	GrpcServer   *grpc.Server
-	DataPool     *datapool.Service
+	WorkerConfig                *config.WorkerConfig
+	Listener                    *net.Listener
+	GrpcServer                  *grpc.Server
+	DataPool                    *datapool.Service
+	WithoutConnectRemoteForTest bool
 }
 
 func New(config *config.WorkerConfig, debug bool) (*Peer, error) {
 	peer := &Peer{}
+
+	{ //setup debug mode
+		peer.WithoutConnectRemoteForTest = debug
+	}
 
 	{ //setup config
 		peer.WorkerConfig = config
@@ -56,29 +61,31 @@ func New(config *config.WorkerConfig, debug bool) (*Peer, error) {
 
 func (p *Peer) Run(ctx context.Context) error {
 	//Workerのサインアップ
-	if p.WorkerConfig.Bridge.AccountId == "" {
-		connBridge, err := grpc.Dial(p.WorkerConfig.Bridge.Addr, grpc.WithInsecure())
-		if err != nil {
-			return err
+	if p.WithoutConnectRemoteForTest == false {
+		if p.WorkerConfig.Bridge.AccountId == "" {
+			connBridge, err := grpc.Dial(p.WorkerConfig.Bridge.Addr, grpc.WithInsecure())
+			if err != nil {
+				return err
+			}
+			defer connBridge.Close()
+			clientAccount := bpb.NewAccountingClient(connBridge)
+			ctxAccount, accountCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer accountCancel()
+			max := new(big.Int)
+			max.SetInt64(int64(p.WorkerConfig.Bridge.AccountRandMax))
+			n, err := rand.Int(rand.Reader, max)
+			if err != nil {
+				return err
+			}
+			accountid := fmt.Sprint(n.Int64())
+			reqSignup := &bpb.SignupWorkerRequest{Id: accountid, Addr: p.WorkerConfig.Server.Addr}
+			_, err = clientAccount.SignupWorker(ctxAccount, reqSignup)
+			if err != nil {
+				log2.Err.Printf("failed to signup worker\n%#v\n\tworker/peer.go", err)
+				return err
+			}
+			log2.Debug.Printf("an account has been created (id:%s)", accountid)
 		}
-		defer connBridge.Close()
-		clientAccount := bpb.NewAccountingClient(connBridge)
-		ctxAccount, accountCancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer accountCancel()
-		max := new(big.Int)
-		max.SetInt64(int64(p.WorkerConfig.Bridge.AccountRandMax))
-		n, err := rand.Int(rand.Reader, max)
-		if err != nil {
-			return err
-		}
-		accountid := fmt.Sprint(n.Int64())
-		reqSignup := &bpb.SignupWorkerRequest{Id: accountid, Addr: p.WorkerConfig.Server.Addr}
-		_, err = clientAccount.SignupWorker(ctxAccount, reqSignup)
-		if err != nil {
-			log2.Err.Printf("failed to signup worker\n%#v\n\tworker/peer.go", err)
-			return err
-		}
-		log2.Debug.Printf("an account has been created (id:%s)", accountid)
 	}
 
 	//各種サービス起動

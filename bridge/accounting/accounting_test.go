@@ -6,7 +6,9 @@ import (
 	"net"
 	"testing"
 	"time"
+	"yox2yox/antone/bridge"
 	"yox2yox/antone/bridge/accounting"
+	"yox2yox/antone/bridge/config"
 	pb "yox2yox/antone/bridge/pb"
 	"yox2yox/antone/worker"
 	wconfig "yox2yox/antone/worker/config"
@@ -413,6 +415,18 @@ func TestServiceWithRemoteWorker(t *testing.T) {
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
 	}
+
+	go func() {
+		confb, err := config.ReadBridgeConfig()
+		bpeer, err := bridge.New(confb, false)
+		ctxb, cancelb := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelb()
+		defer bpeer.Close()
+		err = bpeer.Run(ctxb)
+		if err != nil {
+			t.Fatalf("want no error,but error %#v", err)
+		}
+	}()
 
 	go func() {
 		conf, err := wconfig.ReadWorkerConfig()
