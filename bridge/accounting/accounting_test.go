@@ -261,6 +261,9 @@ func TestEndpoint(t *testing.T) {
 	accountingS := accounting.NewService(true)
 	endpoint := accounting.NewEndpoint(accountingS)
 	grpcServer, listen, err := UpServer(addr, port)
+	if err != nil {
+		t.Fatalf("want no error, but error %#v", err)
+	}
 	defer listen.Close()
 	go func() {
 		pb.RegisterAccountingServer(grpcServer, endpoint)

@@ -171,239 +171,31 @@ func (m *ValidationResult) GetReject() bool {
 	return false
 }
 
-type DatapoolUpdate struct {
-	Userid               string   `protobuf:"bytes,1,opt,name=userid,proto3" json:"userid,omitempty"`
-	Pool                 int32    `protobuf:"varint,2,opt,name=pool,proto3" json:"pool,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *DatapoolUpdate) Reset()         { *m = DatapoolUpdate{} }
-func (m *DatapoolUpdate) String() string { return proto.CompactTextString(m) }
-func (*DatapoolUpdate) ProtoMessage()    {}
-func (*DatapoolUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e4ff6184b07e587a, []int{3}
-}
-
-func (m *DatapoolUpdate) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_DatapoolUpdate.Unmarshal(m, b)
-}
-func (m *DatapoolUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_DatapoolUpdate.Marshal(b, m, deterministic)
-}
-func (m *DatapoolUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DatapoolUpdate.Merge(m, src)
-}
-func (m *DatapoolUpdate) XXX_Size() int {
-	return xxx_messageInfo_DatapoolUpdate.Size(m)
-}
-func (m *DatapoolUpdate) XXX_DiscardUnknown() {
-	xxx_messageInfo_DatapoolUpdate.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_DatapoolUpdate proto.InternalMessageInfo
-
-func (m *DatapoolUpdate) GetUserid() string {
-	if m != nil {
-		return m.Userid
-	}
-	return ""
-}
-
-func (m *DatapoolUpdate) GetPool() int32 {
-	if m != nil {
-		return m.Pool
-	}
-	return 0
-}
-
-type UpdateResult struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *UpdateResult) Reset()         { *m = UpdateResult{} }
-func (m *UpdateResult) String() string { return proto.CompactTextString(m) }
-func (*UpdateResult) ProtoMessage()    {}
-func (*UpdateResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e4ff6184b07e587a, []int{4}
-}
-
-func (m *UpdateResult) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_UpdateResult.Unmarshal(m, b)
-}
-func (m *UpdateResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_UpdateResult.Marshal(b, m, deterministic)
-}
-func (m *UpdateResult) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_UpdateResult.Merge(m, src)
-}
-func (m *UpdateResult) XXX_Size() int {
-	return xxx_messageInfo_UpdateResult.Size(m)
-}
-func (m *UpdateResult) XXX_DiscardUnknown() {
-	xxx_messageInfo_UpdateResult.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_UpdateResult proto.InternalMessageInfo
-
-type DatapoolInfo struct {
-	Userid               string   `protobuf:"bytes,1,opt,name=userid,proto3" json:"userid,omitempty"`
-	Data                 int32    `protobuf:"varint,2,opt,name=data,proto3" json:"data,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *DatapoolInfo) Reset()         { *m = DatapoolInfo{} }
-func (m *DatapoolInfo) String() string { return proto.CompactTextString(m) }
-func (*DatapoolInfo) ProtoMessage()    {}
-func (*DatapoolInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e4ff6184b07e587a, []int{5}
-}
-
-func (m *DatapoolInfo) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_DatapoolInfo.Unmarshal(m, b)
-}
-func (m *DatapoolInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_DatapoolInfo.Marshal(b, m, deterministic)
-}
-func (m *DatapoolInfo) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DatapoolInfo.Merge(m, src)
-}
-func (m *DatapoolInfo) XXX_Size() int {
-	return xxx_messageInfo_DatapoolInfo.Size(m)
-}
-func (m *DatapoolInfo) XXX_DiscardUnknown() {
-	xxx_messageInfo_DatapoolInfo.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_DatapoolInfo proto.InternalMessageInfo
-
-func (m *DatapoolInfo) GetUserid() string {
-	if m != nil {
-		return m.Userid
-	}
-	return ""
-}
-
-func (m *DatapoolInfo) GetData() int32 {
-	if m != nil {
-		return m.Data
-	}
-	return 0
-}
-
-type CreateDatapoolResult struct {
-	Pool                 int32    `protobuf:"varint,1,opt,name=pool,proto3" json:"pool,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *CreateDatapoolResult) Reset()         { *m = CreateDatapoolResult{} }
-func (m *CreateDatapoolResult) String() string { return proto.CompactTextString(m) }
-func (*CreateDatapoolResult) ProtoMessage()    {}
-func (*CreateDatapoolResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e4ff6184b07e587a, []int{6}
-}
-
-func (m *CreateDatapoolResult) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_CreateDatapoolResult.Unmarshal(m, b)
-}
-func (m *CreateDatapoolResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_CreateDatapoolResult.Marshal(b, m, deterministic)
-}
-func (m *CreateDatapoolResult) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CreateDatapoolResult.Merge(m, src)
-}
-func (m *CreateDatapoolResult) XXX_Size() int {
-	return xxx_messageInfo_CreateDatapoolResult.Size(m)
-}
-func (m *CreateDatapoolResult) XXX_DiscardUnknown() {
-	xxx_messageInfo_CreateDatapoolResult.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_CreateDatapoolResult proto.InternalMessageInfo
-
-func (m *CreateDatapoolResult) GetPool() int32 {
-	if m != nil {
-		return m.Pool
-	}
-	return 0
-}
-
-type DeleteDatapoolResult struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *DeleteDatapoolResult) Reset()         { *m = DeleteDatapoolResult{} }
-func (m *DeleteDatapoolResult) String() string { return proto.CompactTextString(m) }
-func (*DeleteDatapoolResult) ProtoMessage()    {}
-func (*DeleteDatapoolResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e4ff6184b07e587a, []int{7}
-}
-
-func (m *DeleteDatapoolResult) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_DeleteDatapoolResult.Unmarshal(m, b)
-}
-func (m *DeleteDatapoolResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_DeleteDatapoolResult.Marshal(b, m, deterministic)
-}
-func (m *DeleteDatapoolResult) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DeleteDatapoolResult.Merge(m, src)
-}
-func (m *DeleteDatapoolResult) XXX_Size() int {
-	return xxx_messageInfo_DeleteDatapoolResult.Size(m)
-}
-func (m *DeleteDatapoolResult) XXX_DiscardUnknown() {
-	xxx_messageInfo_DeleteDatapoolResult.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_DeleteDatapoolResult proto.InternalMessageInfo
-
 func init() {
 	proto.RegisterType((*ValidatableCodeRequest)(nil), "pb.ValidatableCodeRequest")
 	proto.RegisterType((*ValidatableCode)(nil), "pb.ValidatableCode")
 	proto.RegisterType((*ValidationResult)(nil), "pb.ValidationResult")
-	proto.RegisterType((*DatapoolUpdate)(nil), "pb.DatapoolUpdate")
-	proto.RegisterType((*UpdateResult)(nil), "pb.UpdateResult")
-	proto.RegisterType((*DatapoolInfo)(nil), "pb.DatapoolInfo")
-	proto.RegisterType((*CreateDatapoolResult)(nil), "pb.CreateDatapoolResult")
-	proto.RegisterType((*DeleteDatapoolResult)(nil), "pb.DeleteDatapoolResult")
 }
 
 func init() { proto.RegisterFile("worker.proto", fileDescriptor_e4ff6184b07e587a) }
 
 var fileDescriptor_e4ff6184b07e587a = []byte{
-	// 364 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x93, 0xcf, 0x6b, 0xea, 0x40,
-	0x10, 0xc7, 0x93, 0xf8, 0x14, 0xdf, 0x3c, 0x89, 0x32, 0x4f, 0x24, 0xe4, 0x24, 0x7b, 0x92, 0x77,
-	0xf0, 0xf0, 0x3c, 0xb4, 0x94, 0xe2, 0x45, 0x41, 0x7a, 0x2a, 0x04, 0xda, 0xde, 0x0a, 0x9b, 0xee,
-	0xb4, 0xa4, 0x0d, 0x6e, 0xba, 0xae, 0xf4, 0xda, 0x3f, 0xbd, 0xec, 0x26, 0x31, 0x3f, 0x1a, 0x7b,
-	0xdb, 0x99, 0x9d, 0xcf, 0x77, 0x67, 0xbe, 0x93, 0xc0, 0xe8, 0x43, 0xaa, 0x37, 0x52, 0xcb, 0x4c,
-	0x49, 0x2d, 0xd1, 0xcb, 0x62, 0xf6, 0x08, 0xb3, 0x7b, 0x9e, 0x26, 0x82, 0x6b, 0x1e, 0xa7, 0xb4,
-	0x91, 0x82, 0x22, 0x7a, 0x3f, 0xd2, 0x41, 0x63, 0x08, 0xc3, 0x58, 0x25, 0xe2, 0x85, 0x12, 0x11,
-	0xb8, 0x73, 0x77, 0xf1, 0x3b, 0x3a, 0xc5, 0x38, 0x83, 0xc1, 0xf1, 0x40, 0x2a, 0x11, 0x81, 0x67,
-	0x6f, 0x8a, 0x08, 0x27, 0xd0, 0xe3, 0x42, 0x04, 0xbd, 0xb9, 0xbb, 0xe8, 0x47, 0xe6, 0xc8, 0x2e,
-	0x60, 0xdc, 0xd2, 0x47, 0x84, 0x5f, 0x26, 0xb4, 0xa2, 0xfd, 0xc8, 0x9e, 0x4b, 0xd0, 0xab, 0xc0,
-	0x35, 0x4c, 0x0a, 0x30, 0x91, 0xfb, 0x88, 0x0e, 0xc7, 0x54, 0x1b, 0x32, 0x93, 0x32, 0x2d, 0x49,
-	0x73, 0x36, 0xad, 0x28, 0x7a, 0xa5, 0x27, 0x6d, 0xe1, 0x61, 0x54, 0x44, 0xec, 0x1a, 0xfc, 0x2d,
-	0xd7, 0xdc, 0xd4, 0xdc, 0x65, 0x82, 0x6b, 0xaa, 0x35, 0xed, 0x36, 0x9a, 0x2e, 0x55, 0xbd, 0x4a,
-	0x95, 0xf9, 0x30, 0xca, 0xa9, 0xfc, 0x65, 0x76, 0x05, 0xa3, 0x52, 0xed, 0x66, 0xff, 0x2c, 0x7f,
-	0xd2, 0xb2, 0xb3, 0x79, 0xd5, 0x6c, 0xec, 0x1f, 0x4c, 0x37, 0x8a, 0xb8, 0xa6, 0x52, 0xe1, 0xfc,
-	0x34, 0x6c, 0x06, 0xd3, 0x2d, 0xa5, 0xd4, 0xae, 0xfd, 0xff, 0xd9, 0x83, 0xc1, 0x83, 0xdd, 0x1d,
-	0xae, 0x61, 0x7c, 0xab, 0x04, 0xa9, 0xca, 0x1d, 0xfc, 0xbb, 0xcc, 0xe2, 0x65, 0xcb, 0xe6, 0x70,
-	0x5a, 0x4b, 0x9e, 0x2c, 0x64, 0x0e, 0xee, 0x00, 0x77, 0xa4, 0xdb, 0x4b, 0x09, 0x3b, 0x24, 0x8a,
-	0x2f, 0x21, 0xec, 0x92, 0x67, 0x0e, 0xae, 0xe0, 0xcf, 0x8e, 0x74, 0xd9, 0x28, 0x4e, 0x4c, 0x55,
-	0xdd, 0xa4, 0xf0, 0x5b, 0x86, 0x39, 0x78, 0x09, 0x7e, 0x6e, 0xec, 0x89, 0xc3, 0x7a, 0x55, 0x7e,
-	0x97, 0x93, 0x8d, 0x05, 0x38, 0xb8, 0x06, 0xbf, 0x69, 0x63, 0xc7, 0x8b, 0x81, 0xc9, 0x74, 0x99,
-	0x9d, 0xf3, 0x4d, 0x6b, 0xcf, 0xf1, 0x5d, 0x0b, 0x60, 0x4e, 0x3c, 0xb0, 0x3f, 0xcd, 0xea, 0x2b,
-	0x00, 0x00, 0xff, 0xff, 0xc8, 0x17, 0x57, 0xca, 0x44, 0x03, 0x00, 0x00,
+	// 238 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x90, 0x3d, 0x4b, 0xc4, 0x40,
+	0x10, 0x86, 0x2f, 0x39, 0x2f, 0x9c, 0x83, 0x70, 0xc7, 0x28, 0x47, 0x48, 0x75, 0xa4, 0xba, 0x2a,
+	0x85, 0x16, 0x76, 0xd7, 0x58, 0x5c, 0x29, 0x6c, 0xa1, 0x9d, 0x90, 0x75, 0x06, 0x59, 0x0d, 0xee,
+	0x3a, 0xd9, 0xe0, 0xef, 0xf0, 0x1f, 0xcb, 0x2e, 0x7b, 0x1f, 0x84, 0x74, 0xef, 0x9b, 0xf0, 0x3c,
+	0x3b, 0x33, 0x70, 0xf3, 0x6b, 0xe5, 0x8b, 0xa5, 0x71, 0x62, 0xbd, 0xc5, 0xdc, 0xe9, 0xfa, 0x0d,
+	0x36, 0x2f, 0x6d, 0x67, 0xa8, 0xf5, 0xad, 0xee, 0xf8, 0xc9, 0x12, 0x2b, 0xfe, 0x19, 0xb8, 0xf7,
+	0x58, 0xc1, 0x52, 0x8b, 0xa1, 0x0f, 0x36, 0x54, 0x66, 0xdb, 0x6c, 0x77, 0xad, 0x4e, 0x1d, 0x37,
+	0x50, 0x0c, 0x3d, 0x8b, 0xa1, 0x32, 0x8f, 0x7f, 0x52, 0xc3, 0x35, 0xcc, 0x5b, 0xa2, 0x72, 0xbe,
+	0xcd, 0x76, 0x0b, 0x15, 0x62, 0xfd, 0x08, 0xab, 0x91, 0x1f, 0x11, 0xae, 0x42, 0x8d, 0xd2, 0x85,
+	0x8a, 0xf9, 0x08, 0xe6, 0x67, 0x70, 0x0f, 0xeb, 0x04, 0x1a, 0xfb, 0xad, 0xb8, 0x1f, 0x3a, 0x1f,
+	0x48, 0x67, 0x6d, 0x77, 0x24, 0x43, 0x0e, 0xa3, 0x08, 0x7f, 0xf2, 0xbb, 0x8f, 0xf0, 0x52, 0xa5,
+	0x76, 0xff, 0x97, 0x41, 0xf1, 0x1a, 0xb7, 0xc5, 0x3d, 0xac, 0x9e, 0x85, 0x58, 0xce, 0x3e, 0xbc,
+	0x6d, 0x9c, 0x6e, 0x46, 0x83, 0x55, 0x77, 0x17, 0x1f, 0x4f, 0x8f, 0xd6, 0x33, 0x3c, 0x00, 0x1e,
+	0xd8, 0x8f, 0xd7, 0xa8, 0x26, 0x14, 0xe9, 0x76, 0xd5, 0x94, 0xbe, 0x9e, 0xe9, 0x22, 0xde, 0xfd,
+	0xe1, 0x3f, 0x00, 0x00, 0xff, 0xff, 0x60, 0xba, 0x34, 0xd3, 0x87, 0x01, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -420,10 +212,6 @@ const _ = grpc.SupportPackageIsVersion4
 type WorkerClient interface {
 	OrderValidation(ctx context.Context, in *ValidatableCode, opts ...grpc.CallOption) (*ValidationResult, error)
 	GetValidatableCode(ctx context.Context, in *ValidatableCodeRequest, opts ...grpc.CallOption) (*ValidatableCode, error)
-	GetDatapool(ctx context.Context, in *DatapoolInfo, opts ...grpc.CallOption) (*DatapoolInfo, error)
-	UpdateDatapool(ctx context.Context, in *DatapoolUpdate, opts ...grpc.CallOption) (*UpdateResult, error)
-	CreateDatapool(ctx context.Context, in *DatapoolInfo, opts ...grpc.CallOption) (*CreateDatapoolResult, error)
-	DeleteDatapool(ctx context.Context, in *DatapoolInfo, opts ...grpc.CallOption) (*DeleteDatapoolResult, error)
 }
 
 type workerClient struct {
@@ -452,50 +240,10 @@ func (c *workerClient) GetValidatableCode(ctx context.Context, in *ValidatableCo
 	return out, nil
 }
 
-func (c *workerClient) GetDatapool(ctx context.Context, in *DatapoolInfo, opts ...grpc.CallOption) (*DatapoolInfo, error) {
-	out := new(DatapoolInfo)
-	err := c.cc.Invoke(ctx, "/pb.Worker/GetDatapool", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerClient) UpdateDatapool(ctx context.Context, in *DatapoolUpdate, opts ...grpc.CallOption) (*UpdateResult, error) {
-	out := new(UpdateResult)
-	err := c.cc.Invoke(ctx, "/pb.Worker/UpdateDatapool", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerClient) CreateDatapool(ctx context.Context, in *DatapoolInfo, opts ...grpc.CallOption) (*CreateDatapoolResult, error) {
-	out := new(CreateDatapoolResult)
-	err := c.cc.Invoke(ctx, "/pb.Worker/CreateDatapool", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerClient) DeleteDatapool(ctx context.Context, in *DatapoolInfo, opts ...grpc.CallOption) (*DeleteDatapoolResult, error) {
-	out := new(DeleteDatapoolResult)
-	err := c.cc.Invoke(ctx, "/pb.Worker/DeleteDatapool", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // WorkerServer is the server API for Worker service.
 type WorkerServer interface {
 	OrderValidation(context.Context, *ValidatableCode) (*ValidationResult, error)
 	GetValidatableCode(context.Context, *ValidatableCodeRequest) (*ValidatableCode, error)
-	GetDatapool(context.Context, *DatapoolInfo) (*DatapoolInfo, error)
-	UpdateDatapool(context.Context, *DatapoolUpdate) (*UpdateResult, error)
-	CreateDatapool(context.Context, *DatapoolInfo) (*CreateDatapoolResult, error)
-	DeleteDatapool(context.Context, *DatapoolInfo) (*DeleteDatapoolResult, error)
 }
 
 func RegisterWorkerServer(s *grpc.Server, srv WorkerServer) {
@@ -538,78 +286,6 @@ func _Worker_GetValidatableCode_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Worker_GetDatapool_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DatapoolInfo)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerServer).GetDatapool(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Worker/GetDatapool",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerServer).GetDatapool(ctx, req.(*DatapoolInfo))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Worker_UpdateDatapool_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DatapoolUpdate)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerServer).UpdateDatapool(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Worker/UpdateDatapool",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerServer).UpdateDatapool(ctx, req.(*DatapoolUpdate))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Worker_CreateDatapool_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DatapoolInfo)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerServer).CreateDatapool(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Worker/CreateDatapool",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerServer).CreateDatapool(ctx, req.(*DatapoolInfo))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Worker_DeleteDatapool_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DatapoolInfo)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerServer).DeleteDatapool(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Worker/DeleteDatapool",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerServer).DeleteDatapool(ctx, req.(*DatapoolInfo))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 var _Worker_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "pb.Worker",
 	HandlerType: (*WorkerServer)(nil),
@@ -621,22 +297,6 @@ var _Worker_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetValidatableCode",
 			Handler:    _Worker_GetValidatableCode_Handler,
-		},
-		{
-			MethodName: "GetDatapool",
-			Handler:    _Worker_GetDatapool_Handler,
-		},
-		{
-			MethodName: "UpdateDatapool",
-			Handler:    _Worker_UpdateDatapool_Handler,
-		},
-		{
-			MethodName: "CreateDatapool",
-			Handler:    _Worker_CreateDatapool_Handler,
-		},
-		{
-			MethodName: "DeleteDatapool",
-			Handler:    _Worker_DeleteDatapool_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

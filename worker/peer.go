@@ -50,6 +50,7 @@ func New(config *config.WorkerConfig, debug bool) (*Peer, error) {
 
 	{ //setup datapool
 		peer.DataPool = datapool.NewService()
+		pb.RegisterDatapoolServer(peer.GrpcServer, datapool.NewEndpoint(peer.DataPool))
 	}
 
 	{ //setup worker
@@ -104,6 +105,7 @@ func (p *Peer) Run(ctx context.Context) error {
 }
 
 func (p *Peer) Close() error {
+	log2.Debug.Printf("closing worker server... Addr:%s", p.WorkerConfig.Server.Addr)
 	if p.GrpcServer != nil {
 		p.GrpcServer.Stop()
 	}

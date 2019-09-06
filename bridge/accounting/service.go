@@ -167,12 +167,12 @@ func (s *Service) DeleteDatapoolOnRemote(userId string, workerId string) error {
 	if err != nil {
 		return err
 	}
-	workerClient := workerpb.NewWorkerClient(conn)
+	datapoolClient := workerpb.NewDatapoolClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	deleteReq := &workerpb.DatapoolInfo{Userid: userId}
-	_, err = workerClient.DeleteDatapool(ctx, deleteReq)
+	deleteReq := &workerpb.DatapoolId{Id: userId}
+	_, err = datapoolClient.DeleteDatapool(ctx, deleteReq)
 	if err != nil {
 		return err
 	}
@@ -228,11 +228,11 @@ func (s *Service) FetcheDatapoolFromRemote(userId string) (data int32, failedRem
 		if err != nil {
 			exceptions = append(exceptions, holder.Id)
 		} else {
-			workerClient := workerpb.NewWorkerClient(conn)
+			dpClient := workerpb.NewDatapoolClient(conn)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			dpinfo := &workerpb.DatapoolInfo{Userid: userId}
-			datapool, err := workerClient.GetDatapool(ctx, dpinfo)
+			dpinfo := &workerpb.DatapoolId{Id: userId}
+			datapool, err := dpClient.GetDatapool(ctx, dpinfo)
 			//TODO:データの検証
 			if err == nil {
 				return datapool.Data, []string{}, nil
@@ -288,12 +288,12 @@ func (s *Service) CreateDatapoolAndSelectHolders(userId string, data int32, num 
 				if err != nil {
 					return
 				}
-				workerClient := workerpb.NewWorkerClient(conn)
+				dpClient := workerpb.NewDatapoolClient(conn)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 
-				datapoolInfo := &workerpb.DatapoolInfo{Userid: userId, Data: data}
-				_, err = workerClient.CreateDatapool(ctx, datapoolInfo)
+				datapoolInfo := &workerpb.DatapoolContent{Id: userId, Data: data}
+				_, err = dpClient.CreateDatapool(ctx, datapoolInfo)
 				if err != nil {
 					fmt.Printf("ERROR %s [] Failed to create datapool on remote %s %s caused by %#v\n", time.Now(), target.Id, target.Addr, err)
 					return
@@ -439,14 +439,14 @@ func (s *Service) UpdateDatapoolRemote(userId string, data int32) error {
 				return
 			}
 			defer conn.Close()
-			workerClient := workerpb.NewWorkerClient(conn)
+			dpClient := workerpb.NewDatapoolClient(conn)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			datapoolUpdate := &workerpb.DatapoolUpdate{
-				Userid: userId,
-				Pool:   int32(data),
+			datapoolUpdate := &workerpb.DatapoolContent{
+				Id:   userId,
+				Data: int32(data),
 			}
-			_, err = workerClient.UpdateDatapool(ctx, datapoolUpdate)
+			_, err = dpClient.UpdateDatapool(ctx, datapoolUpdate)
 			if err != nil {
 				mulocal.Lock()
 				failedHolders = append(failedHolders, target.Id)

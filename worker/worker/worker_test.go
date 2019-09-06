@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"net/http"
-	"sync"
 	"testing"
 	"time"
 	"yox2yox/antone/worker/datapool"
@@ -33,104 +31,6 @@ func UpServer() (*grpc.Server, net.Listener, error) {
 	return grpcServer, lis, nil
 }
 
-//データプールの作成と取得に成功するか
-func TestWorkerEndpoint_CreateNewDataPoolAndGet(t *testing.T) {
-	//サーバー部
-	datapool := datapool.NewService()
-	grpcServer, listen, err := UpServer()
-	if err != nil {
-		t.Fatalf("failed to up server %#v", err)
-	}
-	go func() {
-		pb.RegisterWorkerServer(grpcServer, worker.NewEndpoint(datapool))
-		err = grpcServer.Serve(listen)
-		if err != nil && err != context.Canceled && err != grpc.ErrServerStopped && err != http.ErrServerClosed {
-			t.Fatalf("failed test %#v", err.Error())
-		}
-	}()
-	defer grpcServer.Stop()
-
-	//クライアント部
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-	if err != nil {
-		t.Fatalf("failed test %#v", err)
-	}
-	defer conn.Close()
-	client := pb.NewWorkerClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	getResult, err := client.GetDatapool(ctx, &pb.DatapoolInfo{Userid: testUserId})
-	if err == nil {
-		t.Fatalf("want has error,but nil")
-	}
-
-	createResult, err := client.CreateDatapool(ctx, &pb.DatapoolInfo{Userid: testUserId})
-	if err != nil {
-		t.Fatalf("failed test %#v", err)
-	}
-	if createResult == nil {
-		t.Fatalf("failed test updateResult is nil")
-	}
-
-	getResult, err = client.GetDatapool(ctx, &pb.DatapoolInfo{Userid: testUserId})
-	if err != nil {
-		t.Fatalf("want no error,but error %#v", err)
-	}
-	if getResult == nil {
-		t.Fatalf("want gotten datapool is no nil,but nil")
-	}
-	if getResult.Data != 0 {
-		t.Fatalf("want gotten datapool is 0,but %#v", getResult.Data)
-	}
-}
-
-//既に存在するデータプールの作成に正しいエラーを出すか
-func TestWorkerEndpoint_CreateExistDataPool_Fail(t *testing.T) {
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	//サーバー部
-	datapool := datapool.NewService()
-	grpcServer, listen, err := UpServer()
-	if err != nil {
-		t.Fatalf("failed to up server %#v", err)
-	}
-	go func() {
-		pb.RegisterWorkerServer(grpcServer, worker.NewEndpoint(datapool))
-		err = grpcServer.Serve(listen)
-		if err != nil {
-			t.Fatalf("failed test %#v", err)
-		}
-		defer wg.Done()
-	}()
-
-	//データプール作成
-	err = datapool.CreateNewDataPool(testUserId, 0)
-	if err != nil {
-		t.Fatalf("failed to create datapool %#v", err)
-	}
-
-	//クライアント部
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-	if err != nil {
-		t.Fatalf("failed test %#v", err)
-	}
-
-	client := pb.NewWorkerClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-
-	_, err = client.CreateDatapool(ctx, &pb.DatapoolInfo{Userid: testUserId})
-	if err == nil {
-		t.Fatalf("failed to get error %#v", err)
-	}
-
-	conn.Close()
-	cancel()
-	grpcServer.Stop()
-	listen.Close()
-	wg.Wait()
-}
-
 //ValidatebelCodeの生成に成功するか
 func TestWorkerEndpoint_GetValidatableCode_Success(t *testing.T) {
 	datapool := datapool.NewService()
@@ -148,7 +48,7 @@ func TestWorkerEndpoint_GetValidatableCode_Success(t *testing.T) {
 	defer grpcServer.Stop()
 	defer listen.Close()
 
-	err = datapool.CreateNewDataPool(testUserId, 0)
+	err = datapool.CreateDataPool(testUserId, 0)
 	if err != nil {
 		t.Fatalf("failed to create datapool %#v", err)
 	}
@@ -201,76 +101,4 @@ func TestWorkerEndpoint_GetValidatableCodeNotExist_Fail(t *testing.T) {
 	if err == nil {
 		t.Fatalf("failed to get error %#v", err)
 	}
-}
-
-//データプールの更新に成功するか
-func TestWorkerEndpoint_UpdateDatabase_Success(t *testing.T) {
-	datapool := datapool.NewService()
-	grpcServer, listen, err := UpServer()
-	if err != nil {
-		t.Fatalf("failed to up server %#v", err)
-		return
-	}
-	go func() {
-		pb.RegisterWorkerServer(grpcServer, worker.NewEndpoint(datapool))
-		err = grpcServer.Serve(listen)
-		if err != nil {
-			t.Fatalf("failed test %#v", err.Error())
-		}
-	}()
-	defer grpcServer.Stop()
-
-	err = datapool.CreateNewDataPool(testUserId, 0)
-	if err != nil {
-		t.Fatalf("failed to create datapool %#v", err)
-	}
-
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-	if err != nil {
-		t.Fatalf("failed test %#v", err)
-	}
-	defer conn.Close()
-	client := pb.NewWorkerClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	updateResult, err := client.UpdateDatapool(ctx, &pb.DatapoolUpdate{Userid: testUserId, Pool: 50})
-	if err != nil {
-		t.Fatalf("failed test %#v", err)
-	}
-	if updateResult == nil {
-		t.Fatalf("failed test updateResult is nil")
-	}
-}
-
-//存在しないデータプールの更新に対してエラーを出すか
-func TestWorkerEndpoint_UpdateDataPoolNotExist_Fail(t *testing.T) {
-	//サーバー部
-	datapool := datapool.NewService()
-	grpcServer, listen, err := UpServer()
-	if err != nil {
-		t.Fatalf("failed to up server %#v", err)
-	}
-	go func() {
-		pb.RegisterWorkerServer(grpcServer, worker.NewEndpoint(datapool))
-		err = grpcServer.Serve(listen)
-		if err != nil {
-			t.Fatalf("failed test %#v", err)
-		}
-	}()
-	defer grpcServer.Stop()
-
-	//クライアント部
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-	if err != nil {
-		t.Fatalf("failed test %#v", err)
-	}
-	defer conn.Close()
-	client := pb.NewWorkerClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	_, err = client.UpdateDatapool(ctx, &pb.DatapoolUpdate{Userid: testUserId, Pool: 50})
-	if err == nil {
-		t.Fatalf("failed to get error %#v", err)
-	}
-
 }

@@ -2,9 +2,11 @@ package datapool
 
 import (
 	"errors"
+	"sync"
 )
 
 type Service struct {
+	sync.RWMutex
 	dataPool map[string]*int32
 }
 
@@ -20,48 +22,61 @@ func NewService() *Service {
 }
 
 //新規DataPoolの追加
-func (s *Service) CreateNewDataPool(userid string, data int32) error {
-	//TODO:ミューテーションを考える
-	_, exist := s.dataPool[userid]
+func (s *Service) CreateDataPool(id string, data int32) error {
+	s.RLock()
+	_, exist := s.dataPool[id]
+	s.RUnlock()
 	if exist {
 		return ErrDataPoolAlreadyExist
 	}
 	var pool int32 = data
-	s.dataPool[userid] = &pool
+	s.Lock()
+	s.dataPool[id] = &pool
+	s.Unlock()
 	return nil
 }
 
 //Datapoolを削除
-func (s *Service) DeleteDataPool(userid string) error {
-	_, exist := s.dataPool[userid]
+func (s *Service) DeleteDataPool(id string) error {
+	s.RLock()
+	_, exist := s.dataPool[id]
+	s.RUnlock()
 	if !exist {
 		return ErrDataPoolNotExist
 	}
-	delete(s.dataPool, userid)
+	s.Lock()
+	delete(s.dataPool, id)
+	s.Unlock()
 	return nil
 }
 
-//useridに結びついたdatapoolを取得
-func (s *Service) GetDataPool(userid string) (int32, error) {
-	if !s.ExistDataPool(userid) {
+//idに結びついたdatapoolを取得
+func (s *Service) GetDataPool(id string) (int32, error) {
+	if !s.ExistDataPool(id) {
 		return -1, ErrDataPoolNotExist
 	} else {
-		return *s.dataPool[userid], nil
+		s.RLock()
+		data := *s.dataPool[id]
+		s.RUnlock()
+		return data, nil
 	}
 }
 
-//useridに結びついたデータプールにデータを登録
-func (s *Service) SetDataPool(userid string, data int32) error {
-	//TODO:ミューテーションを考える
-	if !s.ExistDataPool(userid) {
+//idに結びついたデータプールにデータを登録
+func (s *Service) SetDataPool(id string, data int32) error {
+	if !s.ExistDataPool(id) {
 		return ErrDataPoolNotExist
 	}
-	s.dataPool[userid] = &data
+	s.Lock()
+	s.dataPool[id] = &data
+	s.Unlock()
 	return nil
 }
 
 //データプールが存在するか
-func (s *Service) ExistDataPool(userid string) bool {
-	_, exist := s.dataPool[userid]
+func (s *Service) ExistDataPool(id string) bool {
+	s.RLock()
+	_, exist := s.dataPool[id]
+	s.RUnlock()
 	return exist
 }
