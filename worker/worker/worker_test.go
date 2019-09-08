@@ -39,7 +39,7 @@ func TestWorkerEndpoint_GetValidatableCode_Success(t *testing.T) {
 		t.Fatalf("failed to up server %#v", err)
 	}
 	go func() {
-		pb.RegisterWorkerServer(grpcServer, worker.NewEndpoint(datapool))
+		pb.RegisterWorkerServer(grpcServer, worker.NewEndpoint(datapool, false))
 		grpcServer.Serve(listen)
 		if err != nil {
 			t.Fatalf("failed test %#v", err)
@@ -80,7 +80,7 @@ func TestWorkerEndpoint_GetValidatableCodeNotExist_Fail(t *testing.T) {
 		t.Fatalf("failed to up server %#v", err)
 	}
 	go func() {
-		pb.RegisterWorkerServer(grpcServer, worker.NewEndpoint(datapool))
+		pb.RegisterWorkerServer(grpcServer, worker.NewEndpoint(datapool, false))
 		err = grpcServer.Serve(listen)
 		if err != nil {
 			t.Fatalf("failed test %#v", err)

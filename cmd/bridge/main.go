@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -12,10 +13,18 @@ import (
 
 func main() {
 
+	flag.Parse()
+	args := flag.Args()
+
 	config, err := config.ReadBridgeConfig()
 	if err != nil {
 		fmt.Printf("FATAL %s [] Failed to read config", time.Now())
 	}
+
+	if len(args) > 1 && args[0] != "" {
+		config.Server.Addr = args[0]
+	}
+
 	peer, err := bridge.New(config, false)
 	if err != nil {
 		fmt.Printf("FATAL %s [] Failed to initialize peer", time.Now())

@@ -11,14 +11,16 @@ type Endpoint struct {
 	Datapool *datapool.Service
 	Db       map[string]int32
 	Id       string
+	BadMode  bool
 }
 
-func NewEndpoint(datapool *datapool.Service) *Endpoint {
+func NewEndpoint(datapool *datapool.Service, badmode bool) *Endpoint {
 	return &Endpoint{
 		Datapool: datapool,
 		Db: map[string]int32{
 			"client0": 0,
 		},
+		BadMode: badmode,
 	}
 }
 
@@ -28,6 +30,9 @@ var (
 )
 
 func (e *Endpoint) GetValidatableCode(ctx context.Context, vCodeRequest *pb.ValidatableCodeRequest) (*pb.ValidatableCode, error) {
+	if e.BadMode {
+		return &pb.ValidatableCode{Data: -1, Add: 0}, nil
+	}
 	datapoolid := vCodeRequest.Datapoolid
 	data, err := e.Datapool.GetDataPool(datapoolid)
 	if err == datapool.ErrDataPoolNotExist {

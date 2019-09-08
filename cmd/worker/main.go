@@ -15,19 +15,30 @@ func main() {
 
 	flag.Parse()
 	args := flag.Args()
+	badmode := false
 
 	errch := make(chan struct{})
 
 	log2.Debug.Println("start main function")
 	config, err := config.ReadWorkerConfig()
 	if len(args) > 1 && args[0] != "" {
-		config.Bridge.AccountId = args[0]
+		config.Server.Addr = args[0]
 	}
+	if len(args) > 2 && args[1] != "" {
+		config.Bridge.Addr = args[1]
+	}
+	if len(args) > 3 {
+		config.Bridge.AccountId = args[2]
+	}
+	if len(args) > 4 && args[3] == "true" {
+		badmode = true
+	}
+
 	if err != nil {
 		log2.Err.Println("failed to read config")
 		return
 	}
-	peer, err := worker.New(config, false)
+	peer, err := worker.New(config, false, badmode)
 	if err != nil {
 		log2.Err.Println("failed to initialize peer")
 		return

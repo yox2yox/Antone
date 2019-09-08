@@ -27,7 +27,7 @@ type Peer struct {
 	WithoutConnectRemoteForTest bool
 }
 
-func New(config *config.WorkerConfig, debug bool) (*Peer, error) {
+func New(config *config.WorkerConfig, debug bool, badmode bool) (*Peer, error) {
 	peer := &Peer{}
 
 	{ //setup debug mode
@@ -54,7 +54,7 @@ func New(config *config.WorkerConfig, debug bool) (*Peer, error) {
 	}
 
 	{ //setup worker
-		pb.RegisterWorkerServer(peer.GrpcServer, worker.NewEndpoint(peer.DataPool))
+		pb.RegisterWorkerServer(peer.GrpcServer, worker.NewEndpoint(peer.DataPool, badmode))
 	}
 
 	return peer, nil

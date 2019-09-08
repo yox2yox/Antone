@@ -54,7 +54,7 @@ func Test_CreateNetWork(t *testing.T) {
 			t.Fatalf("want no error, but has error %#v", err)
 		}
 		workerConfig.Server.Addr = workersAddr + ":" + strconv.Itoa(workersBasePort+i)
-		wpeer, err := wPeer.New(workerConfig, false)
+		wpeer, err := wPeer.New(workerConfig, false, false)
 		if err != nil {
 			t.Log(workerConfig.Server.Addr)
 			t.Fatalf("want no error, but has error %#v", err)

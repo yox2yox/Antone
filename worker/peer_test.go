@@ -32,7 +32,7 @@ func InitPeer() (*worker.Peer, error) {
 	if err != nil {
 		return nil, err
 	}
-	peer, err := worker.New(config, true)
+	peer, err := worker.New(config, true, false)
 	if err != nil {
 		return nil, err
 	}
