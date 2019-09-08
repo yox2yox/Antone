@@ -9,12 +9,15 @@ import (
 	"time"
 	"yox2yox/antone/bridge"
 	"yox2yox/antone/bridge/config"
+	"yox2yox/antone/internal/log2"
 )
 
 func main() {
 
 	flag.Parse()
 	args := flag.Args()
+
+	defer log2.Close()
 
 	config, err := config.ReadBridgeConfig()
 	if err != nil {

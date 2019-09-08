@@ -2,7 +2,18 @@ package config
 
 import (
 	"testing"
+	"os"
+	"yox2yox/antone/internal/log2"
 )
+
+func TestMain(m *testing.M) {
+	// パッケージ内のテストの実行
+	code := m.Run()
+	// 終了処理
+	log2.Close()
+	// テストの終了コードで exit
+	os.Exit(code)
+}
 
 func TestReadConfigSuccess(t *testing.T) {
 	bridgeConfig, err := ReadBridgeConfig()

@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"testing"
 	"time"
 	"yox2yox/antone/bridge/accounting"
 	pb "yox2yox/antone/bridge/pb"
+	"yox2yox/antone/internal/log2"
 
 	"google.golang.org/grpc"
 )
@@ -20,6 +22,15 @@ var (
 	testWorkerAddr = "addr"
 	testUserId     = "client0"
 )
+
+func TestMain(m *testing.M) {
+	// パッケージ内のテストの実行
+	code := m.Run()
+	// 終了処理
+	log2.Close()
+	// テストの終了コードで exit
+	os.Exit(code)
+}
 
 //WorkersCountが正しく機能するか
 func TestAccountingService_WorkersCount(t *testing.T) {

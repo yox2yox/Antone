@@ -17,6 +17,8 @@ func main() {
 	args := flag.Args()
 	badmode := false
 
+	defer log2.Close()
+
 	errch := make(chan struct{})
 
 	log2.Debug.Println("start main function")

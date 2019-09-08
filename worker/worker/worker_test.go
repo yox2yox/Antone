@@ -6,6 +6,8 @@ import (
 	"net"
 	"testing"
 	"time"
+	"os"
+	"yox2yox/antone/internal/log2"
 	"yox2yox/antone/worker/datapool"
 	pb "yox2yox/antone/worker/pb"
 	"yox2yox/antone/worker/worker"
@@ -20,6 +22,15 @@ var (
 	listener   net.Listener
 	grpcServer grpc.Server
 )
+
+func TestMain(m *testing.M) {
+	// パッケージ内のテストの実行
+	code := m.Run()
+	// 終了処理
+	log2.Close()
+	// テストの終了コードで exit
+	os.Exit(code)
+}
 
 func UpServer() (*grpc.Server, net.Listener, error) {
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%s", port))

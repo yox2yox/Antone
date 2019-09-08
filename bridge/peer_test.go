@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"os"
+	"yox2yox/antone/internal/log2"
 	config "yox2yox/antone/bridge/config"
 	pb "yox2yox/antone/bridge/pb"
 
@@ -16,6 +18,15 @@ var (
 	testWorkerId   = "worker0"
 	testWorkerAddr = "localhost:10000"
 )
+
+func TestMain(m *testing.M) {
+	// パッケージ内のテストの実行
+	code := m.Run()
+	// 終了処理
+	log2.Close()
+	// テストの終了コードで exit
+	os.Exit(code)
+}
 
 func PeerRun(peer *Peer, ctx context.Context) error {
 

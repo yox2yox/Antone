@@ -2,12 +2,23 @@ package datapool_test
 
 import (
 	"testing"
+	"os"
 	"yox2yox/antone/worker/datapool"
+	"yox2yox/antone/internal/log2"
 )
 
 var (
 	testUserId = "client0"
 )
+
+func TestMain(m *testing.M) {
+	// パッケージ内のテストの実行
+	code := m.Run()
+	// 終了処理
+	log2.Close()
+	// テストの終了コードで exit
+	os.Exit(code)
+}
 
 func Test_InitDataPool(t *testing.T) {
 	datapool := datapool.NewService()
