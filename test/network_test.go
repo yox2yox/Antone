@@ -22,15 +22,7 @@ func Test_CreateNetWork(t *testing.T) {
 	//ホルダーを複数持つクライアントId
 	clientIdMultiHolder := "clientmh"
 	var mhclientData int32 = 0
-
-	workersId := []string{
-		"worker0",
-		"worker1",
-		"worker2",
-		"worker3",
-		"worker4",
-		"worker5",
-	}
+	workerscount := 6
 	workersAddr := "127.0.0.1"
 	workersBasePort := 10001
 
@@ -56,7 +48,7 @@ func Test_CreateNetWork(t *testing.T) {
 	defer cancelBridge()
 
 	//ワーカPeer起動
-	for i, _ := range workersId {
+	for i := 0; i < workerscount; i++ {
 		workerConfig, err := wConfig.ReadWorkerConfig()
 		if err != nil {
 			t.Fatalf("want no error, but has error %#v", err)
@@ -77,6 +69,11 @@ func Test_CreateNetWork(t *testing.T) {
 		}()
 		defer cancelworker()
 		defer wpeer.Close()
+	}
+
+	time.Sleep(1 * time.Second)
+	if bpeer.Accounting.GetWorkersCount() != workerscount {
+		t.Fatalf("want workers count is %d, but %d", workerscount, bpeer.Accounting.GetWorkersCount())
 	}
 
 	//ブリッジクライアント作成
@@ -101,13 +98,6 @@ func Test_CreateNetWork(t *testing.T) {
 	//defer workerCancel()
 
 	//各種アカウント登録
-	for i, workerId := range workersId {
-		_, err = bpeer.Accounting.CreateNewWorker(workerId, wpeers[i].WorkerConfig.Server.Addr)
-		if err != nil {
-			t.Fatalf("want no error,but error %#v", err)
-		}
-	}
-
 	_, err = bpeer.Accounting.CreateNewClient(clientId)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
@@ -128,6 +118,7 @@ func Test_CreateNetWork(t *testing.T) {
 			}
 		}
 	}
+
 	if countholder < 1 {
 		t.Fatalf("want holders count is 1 ,but %#v", countholder)
 	}

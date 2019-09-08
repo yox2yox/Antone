@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+	"yox2yox/antone/internal/log2"
 )
 
 type Client struct {
@@ -83,6 +84,9 @@ func (s *Service) GetWorkersCount() int {
 
 //exceptionを除くworkerの中からnum台選択して返す
 func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worker, error) {
+
+	log2.Debug.Printf("starting select %d workers except %#v",num,exception)
+
 	if len(s.Workers)-len(exception) < num {
 		return nil, ErrWorkersAreNotEnough
 	}
@@ -94,6 +98,7 @@ func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worke
 		s.RLock()
 		pickedId := s.WorkersId[rand.Intn(len(s.WorkersId))]
 		s.RUnlock()
+		log2.Debug.Printf("worker:%s is picked",pickedId)
 		contain := false
 		for _, id := range picked {
 			if id.Id == pickedId {
@@ -107,6 +112,7 @@ func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worke
 		}
 		if contain == false {
 			picked = append(picked, s.Workers[pickedId])
+			log2.Debug.Printf("worker:%s Address:%s is finaly selected",pickedId,s.Workers[pickedId].Addr)
 		} else {
 			i--
 		}
