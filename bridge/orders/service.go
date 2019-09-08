@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 	"yox2yox/antone/bridge/accounting"
+	"yox2yox/antone/bridge/datapool"
 	pb "yox2yox/antone/bridge/pb"
 	workerpb "yox2yox/antone/worker/pb"
 
@@ -18,7 +19,7 @@ var (
 )
 
 type ValidationRequest struct {
-	UserId          string
+	DatapoolId      string
 	Neednum         int
 	HolderId        string
 	ValidatableCode *pb.ValidatableCode
@@ -36,26 +37,28 @@ type Service struct {
 	ValidationRequests          []*ValidationRequest
 	WaitingRequestsId           []string
 	Accounting                  *accounting.Service
+	Datapool                    *datapool.Service
 	Running                     bool
 	WithoutConnectRemoteForTest bool
 	stopChan                    chan struct{}
 }
 
-func NewService(accounting *accounting.Service, withoutConnectRemoteForTest bool) *Service {
+func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool) *Service {
 	return &Service{
 		ValidationRequests:          []*ValidationRequest{},
 		Accounting:                  accounting,
+		Datapool:                    datapool,
 		Running:                     false,
 		WithoutConnectRemoteForTest: withoutConnectRemoteForTest,
 		stopChan:                    make(chan struct{}),
 	}
 }
 
-func (s *Service) IsTheDatapoolAvailable(userId string) bool {
+func (s *Service) IsTheDatapoolAvailable(datapoolId string) bool {
 	s.RLock()
 	available := true
 	for _, id := range s.WaitingRequestsId {
-		if id == userId {
+		if id == datapoolId {
 			available = false
 		}
 	}
@@ -63,12 +66,12 @@ func (s *Service) IsTheDatapoolAvailable(userId string) bool {
 	return available
 }
 
-func (s *Service) getValidatableCodeRemote(holder accounting.Worker, userId string, add int32) (*pb.ValidatableCode, error) {
+func (s *Service) getValidatableCodeRemote(holder accounting.Worker, datapoolId string, add int32) (*pb.ValidatableCode, error) {
 	conn, err := grpc.Dial(holder.Addr, grpc.WithInsecure())
 	client := workerpb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	req := &workerpb.ValidatableCodeRequest{Userid: userId, Add: add}
+	req := &workerpb.ValidatableCodeRequest{Datapoolid: datapoolId, Add: add}
 	vcode, err := client.GetValidatableCode(ctx, req)
 	if err != nil {
 		return nil, err
@@ -82,16 +85,16 @@ func (s *Service) getValidatableCodeRemote(holder accounting.Worker, userId stri
 }
 
 //ValidatableCodeを取得する
-func (s *Service) GetValidatableCode(ctx context.Context, userId string, add int32) (*pb.ValidatableCode, string, error) {
+func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add int32) (*pb.ValidatableCode, string, error) {
 	//データプールが利用可能になるまで無限ループ
-	for s.IsTheDatapoolAvailable(userId) == false {
+	for s.IsTheDatapoolAvailable(datapoolId) == false {
 		select {
 		case <-ctx.Done():
 			return nil, "", nil
 		default:
 		}
 	}
-	holder, err := s.Accounting.SelectDataPoolHolder(userId, []string{})
+	holder, err := s.Datapool.SelectDataPoolHolder(datapoolId, []string{})
 	if err != nil {
 		return nil, "", err
 	}
@@ -102,7 +105,7 @@ func (s *Service) GetValidatableCode(ctx context.Context, userId string, add int
 			Add:  add,
 		}
 	} else {
-		vcode, err = s.getValidatableCodeRemote(holder, userId, add)
+		vcode, err = s.getValidatableCodeRemote(*holder, datapoolId, add)
 		if err != nil {
 			return nil, holder.Id, err
 		}
@@ -132,9 +135,9 @@ func (s *Service) dequeueValidationRequest() *ValidationRequest {
 	return tmp
 }
 
-func (s *Service) AddValidationRequest(userId string, needNum int, holderId string, vcode *pb.ValidatableCode) {
+func (s *Service) AddValidationRequest(datapoolId string, needNum int, holderId string, vcode *pb.ValidatableCode) {
 	fmt.Printf("DEBUG %s [] A ValidationRequest is added to orders.service\n", time.Now().String())
-	vreq := &ValidationRequest{UserId: userId, Neednum: needNum, HolderId: holderId, ValidatableCode: vcode}
+	vreq := &ValidationRequest{DatapoolId: datapoolId, Neednum: needNum, HolderId: holderId, ValidatableCode: vcode}
 	s.Lock()
 	s.ValidationRequests = append(s.ValidationRequests, vreq)
 	s.Unlock()
@@ -335,7 +338,7 @@ func (s *Service) Run() {
 				var vreq *ValidationRequest = nil
 				for available == false {
 					vreq = s.dequeueValidationRequest()
-					available = s.IsTheDatapoolAvailable(vreq.UserId)
+					available = s.IsTheDatapoolAvailable(vreq.DatapoolId)
 					if available == false {
 						waitingvreq = append(waitingvreq, vreq)
 					}
@@ -343,7 +346,7 @@ func (s *Service) Run() {
 
 				if vreq != nil && available == true {
 					//WaitingListに追加
-					s.addWaitingList(vreq.UserId)
+					s.addWaitingList(vreq.DatapoolId)
 					go func() {
 						ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 						defer cancel()
@@ -355,10 +358,10 @@ func (s *Service) Run() {
 						}
 						//結果を送信
 						if conclusion != nil && conclusion.IsRejected == false {
-							s.Accounting.UpdateDatapoolRemote(vreq.UserId, conclusion.Data)
+							s.Datapool.UpdateDatapoolRemote(vreq.DatapoolId, conclusion.Data)
 						}
 						//WaingListから削除
-						s.removeWaitingList(vreq.UserId)
+						s.removeWaitingList(vreq.DatapoolId)
 					}()
 				} else {
 					//取り出したリクエストを待ち行列に戻す

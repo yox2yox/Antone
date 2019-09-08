@@ -112,11 +112,15 @@ func Test_CreateNetWork(t *testing.T) {
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
 	}
+	createdDp, err := bpeer.Datapool.CreateDatapool(clientId, 1)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
 
 	//データが登録されているかチェック
 	countholder := 0
 	for _, wpeer := range wpeers {
-		data, err := wpeer.DataPool.GetDataPool(clientId)
+		data, err := wpeer.DataPool.GetDataPool(createdDp.DatapoolId)
 		if err == nil {
 			countholder += 1
 			if data != 0 {
@@ -128,10 +132,8 @@ func Test_CreateNetWork(t *testing.T) {
 		t.Fatalf("want holders count is 1 ,but %#v", countholder)
 	}
 
-	t.Log("Start to get validatable code")
-
 	//validatableコード取得
-	vCodeRequest := &bpb.ValidatableCodeRequest{Userid: clientId, Add: 1}
+	vCodeRequest := &bpb.ValidatableCodeRequest{Datapoolid: createdDp.DatapoolId, Add: 1}
 	vCode, err := clientOrder.RequestValidatableCode(ctxOrder, vCodeRequest)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
@@ -149,7 +151,7 @@ func Test_CreateNetWork(t *testing.T) {
 	//データが更新されているかチェック
 	countholder = 0
 	for _, wpeer := range wpeers {
-		data, err := wpeer.DataPool.GetDataPool(clientId)
+		data, err := wpeer.DataPool.GetDataPool(createdDp.DatapoolId)
 		if err == nil {
 			countholder += 1
 			if data != clientData {
@@ -163,7 +165,7 @@ func Test_CreateNetWork(t *testing.T) {
 
 	//加算連続
 	//Data += 1
-	vCodeRequest = &bpb.ValidatableCodeRequest{Userid: clientId, Add: 1}
+	vCodeRequest = &bpb.ValidatableCodeRequest{Datapoolid: createdDp.DatapoolId, Add: 1}
 	vCode, err = clientOrder.RequestValidatableCode(ctxOrder, vCodeRequest)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
@@ -177,7 +179,7 @@ func Test_CreateNetWork(t *testing.T) {
 	clientData += 1
 
 	//Data += 2
-	vCodeRequest = &bpb.ValidatableCodeRequest{Userid: clientId, Add: 2}
+	vCodeRequest = &bpb.ValidatableCodeRequest{Datapoolid: createdDp.DatapoolId, Add: 2}
 	vCode, err = clientOrder.RequestValidatableCode(ctxOrder, vCodeRequest)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
@@ -191,7 +193,7 @@ func Test_CreateNetWork(t *testing.T) {
 	clientData += 2
 
 	//Data += 3
-	vCodeRequest = &bpb.ValidatableCodeRequest{Userid: clientId, Add: 3}
+	vCodeRequest = &bpb.ValidatableCodeRequest{Datapoolid: createdDp.DatapoolId, Add: 3}
 	vCode, err = clientOrder.RequestValidatableCode(ctxOrder, vCodeRequest)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
@@ -210,7 +212,7 @@ func Test_CreateNetWork(t *testing.T) {
 	//データが更新されているかチェック
 	countholder = 0
 	for _, wpeer := range wpeers {
-		data, err := wpeer.DataPool.GetDataPool(clientId)
+		data, err := wpeer.DataPool.GetDataPool(createdDp.DatapoolId)
 		if err == nil {
 			countholder += 1
 			if data != clientData {
@@ -227,8 +229,8 @@ func Test_CreateNetWork(t *testing.T) {
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
 	}
-	//ホルダー作成(3台)
-	_, err = bpeer.Accounting.CreateDatapoolAndSelectHolders(clientIdMultiHolder, 0, 3)
+	//ホルダー作成(4台)
+	mhDatapool, err := bpeer.Datapool.CreateDatapool(clientIdMultiHolder, 4)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
 	}
@@ -236,7 +238,7 @@ func Test_CreateNetWork(t *testing.T) {
 	//マルチホルダーのデータプールが作成されているかチェック
 	countholder = 0
 	for _, wpeer := range wpeers {
-		data, err := wpeer.DataPool.GetDataPool(clientIdMultiHolder)
+		data, err := wpeer.DataPool.GetDataPool(mhDatapool.DatapoolId)
 		if err == nil {
 			countholder += 1
 			if data != 0 {
@@ -250,7 +252,7 @@ func Test_CreateNetWork(t *testing.T) {
 
 	//マルチホルダークライアントのvalidatableコード取得
 	//mhData += 1
-	vCodeRequest = &bpb.ValidatableCodeRequest{Userid: clientIdMultiHolder, Add: 1}
+	vCodeRequest = &bpb.ValidatableCodeRequest{Datapoolid: mhDatapool.DatapoolId, Add: 1}
 	vCode, err = clientOrder.RequestValidatableCode(ctxOrder, vCodeRequest)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
@@ -268,7 +270,7 @@ func Test_CreateNetWork(t *testing.T) {
 	//データが更新されているかチェック
 	countholder = 0
 	for _, wpeer := range wpeers {
-		data, err := wpeer.DataPool.GetDataPool(clientIdMultiHolder)
+		data, err := wpeer.DataPool.GetDataPool(mhDatapool.DatapoolId)
 		if err == nil {
 			countholder += 1
 			if data != mhclientData {
@@ -282,7 +284,7 @@ func Test_CreateNetWork(t *testing.T) {
 
 	//加算連続(複数クライアント)
 	//Data += 1
-	vCodeRequest = &bpb.ValidatableCodeRequest{Userid: clientId, Add: 1}
+	vCodeRequest = &bpb.ValidatableCodeRequest{Datapoolid: createdDp.DatapoolId, Add: 1}
 	vCode, err = clientOrder.RequestValidatableCode(ctxOrder, vCodeRequest)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
@@ -296,7 +298,7 @@ func Test_CreateNetWork(t *testing.T) {
 	clientData += 1
 
 	//mhData += 2
-	vCodeRequest = &bpb.ValidatableCodeRequest{Userid: clientIdMultiHolder, Add: 2}
+	vCodeRequest = &bpb.ValidatableCodeRequest{Datapoolid: mhDatapool.DatapoolId, Add: 2}
 	vCode, err = clientOrder.RequestValidatableCode(ctxOrder, vCodeRequest)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
@@ -310,7 +312,7 @@ func Test_CreateNetWork(t *testing.T) {
 	mhclientData += 2
 
 	//Data+=3
-	vCodeRequest = &bpb.ValidatableCodeRequest{Userid: clientId, Add: 3}
+	vCodeRequest = &bpb.ValidatableCodeRequest{Datapoolid: createdDp.DatapoolId, Add: 3}
 	vCode, err = clientOrder.RequestValidatableCode(ctxOrder, vCodeRequest)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
@@ -324,7 +326,7 @@ func Test_CreateNetWork(t *testing.T) {
 	clientData += 3
 
 	//mhData+=4
-	vCodeRequest = &bpb.ValidatableCodeRequest{Userid: clientIdMultiHolder, Add: 4}
+	vCodeRequest = &bpb.ValidatableCodeRequest{Datapoolid: mhDatapool.DatapoolId, Add: 4}
 	vCode, err = clientOrder.RequestValidatableCode(ctxOrder, vCodeRequest)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
@@ -343,14 +345,14 @@ func Test_CreateNetWork(t *testing.T) {
 	//データが更新されているかチェック
 	countholder = 0
 	for _, wpeer := range wpeers {
-		data, err := wpeer.DataPool.GetDataPool(clientId)
+		data, err := wpeer.DataPool.GetDataPool(createdDp.DatapoolId)
 		if err == nil {
 			countholder += 1
 			if data != clientData {
 				t.Fatalf("want user's data==%d,but %#v", clientData, data)
 			}
 		}
-		data, err = wpeer.DataPool.GetDataPool(clientIdMultiHolder)
+		data, err = wpeer.DataPool.GetDataPool(mhDatapool.DatapoolId)
 		if err == nil {
 			countholder += 1
 			if data != mhclientData {

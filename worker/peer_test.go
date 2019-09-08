@@ -112,14 +112,14 @@ func TestWorkerEndpoint_ResponseValidatableCode(t *testing.T) {
 	ctxClient, cancelClient := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelClient()
 
-	_, err = client.GetValidatableCode(ctxClient, &pb.ValidatableCodeRequest{Bridgeid: "bridge0", Userid: testUserId, Add: 10})
+	_, err = client.GetValidatableCode(ctxClient, &pb.ValidatableCodeRequest{Bridgeid: "bridge0", Datapoolid: testUserId, Add: 10})
 	if err == nil {
 		t.Fatalf("want error but nil")
 	}
 
 	peer.DataPool.CreateDataPool(testUserId, 0)
 
-	vCode, err := client.GetValidatableCode(ctxClient, &pb.ValidatableCodeRequest{Bridgeid: "bridge0", Userid: testUserId, Add: 10})
+	vCode, err := client.GetValidatableCode(ctxClient, &pb.ValidatableCodeRequest{Bridgeid: "bridge0", Datapoolid: testUserId, Add: 10})
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
 	}

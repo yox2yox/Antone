@@ -108,7 +108,7 @@ func TestOrderEndpoint_ResponseValidatableCode(t *testing.T) {
 		t.Fatalf("failed to create worker %#v", err)
 	}
 
-	_, err = peer.Accounting.CreateDatapoolAndSelectHolders(testClientId, 0, 1)
+	createdDp, err := peer.Datapool.CreateDatapool(testClientId, 1)
 	if err != nil {
 		t.Fatalf("want no error,but error %#v", err)
 	}
@@ -121,7 +121,7 @@ func TestOrderEndpoint_ResponseValidatableCode(t *testing.T) {
 	client := pb.NewOrdersClient(conn)
 	ctxClient, cancelClient := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelClient()
-	vCode, err := client.RequestValidatableCode(ctxClient, &pb.ValidatableCodeRequest{Userid: testClientId, Add: 10})
+	vCode, err := client.RequestValidatableCode(ctxClient, &pb.ValidatableCodeRequest{Datapoolid: createdDp.DatapoolId, Add: 10})
 
 	if err != nil {
 		t.Fatalf("failed test %#v", err)

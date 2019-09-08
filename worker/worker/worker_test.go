@@ -61,7 +61,7 @@ func TestWorkerEndpoint_GetValidatableCode_Success(t *testing.T) {
 	client := pb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	orderResult, err := client.GetValidatableCode(ctx, &pb.ValidatableCodeRequest{Bridgeid: "0", Userid: testUserId, Add: 10})
+	orderResult, err := client.GetValidatableCode(ctx, &pb.ValidatableCodeRequest{Bridgeid: "0", Datapoolid: testUserId, Add: 10})
 	t.Logf("%#v", orderResult)
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
@@ -97,7 +97,7 @@ func TestWorkerEndpoint_GetValidatableCodeNotExist_Fail(t *testing.T) {
 	client := pb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_, err = client.GetValidatableCode(ctx, &pb.ValidatableCodeRequest{Bridgeid: "0", Userid: testUserId, Add: 10})
+	_, err = client.GetValidatableCode(ctx, &pb.ValidatableCodeRequest{Bridgeid: "0", Datapoolid: testUserId, Add: 10})
 	if err == nil {
 		t.Fatalf("failed to get error %#v", err)
 	}

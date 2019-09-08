@@ -11,7 +11,7 @@ service Worker {
 
 message ValidatableCodeRequest {
   string bridgeid = 1;
-  string userid = 2;
+  string datapoolid = 2;
   int32 add = 3;
 }
 

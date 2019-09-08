@@ -28,8 +28,8 @@ var (
 )
 
 func (e *Endpoint) GetValidatableCode(ctx context.Context, vCodeRequest *pb.ValidatableCodeRequest) (*pb.ValidatableCode, error) {
-	userid := vCodeRequest.Userid
-	data, err := e.Datapool.GetDataPool(userid)
+	datapoolid := vCodeRequest.Datapoolid
+	data, err := e.Datapool.GetDataPool(datapoolid)
 	if err == datapool.ErrDataPoolNotExist {
 		return nil, ErrDataPoolNotExist
 	} else if err != nil {

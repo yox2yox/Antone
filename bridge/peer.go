@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"yox2yox/antone/bridge/accounting"
 	config "yox2yox/antone/bridge/config"
+	"yox2yox/antone/bridge/datapool"
 	"yox2yox/antone/bridge/orders"
 	pb "yox2yox/antone/bridge/pb"
 
@@ -21,6 +22,7 @@ type Peer struct {
 	port       string
 	Listener   *net.Listener
 	Accounting *accounting.Service
+	Datapool   *datapool.Service
 	Orders     *orders.Service
 }
 
@@ -47,8 +49,12 @@ func New(config *config.BridgeConfig, debug bool) (*Peer, error) {
 		pb.RegisterAccountingServer(peer.GrpcServer, accounting.NewEndpoint(peer.Accounting))
 	}
 
+	{ //setup Datapool
+		peer.Datapool = datapool.NewService(peer.Accounting, debug)
+	}
+
 	{ //setup orders
-		peer.Orders = orders.NewService(peer.Accounting, debug)
+		peer.Orders = orders.NewService(peer.Accounting, peer.Datapool, debug)
 		pb.RegisterOrdersServer(peer.GrpcServer, orders.NewEndpoint(peer.Orders, peer.Accounting))
 	}
 

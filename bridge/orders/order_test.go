@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 	"yox2yox/antone/bridge/accounting"
+	"yox2yox/antone/bridge/datapool"
 	pb "yox2yox/antone/bridge/pb"
 
 	"google.golang.org/grpc"
@@ -46,7 +47,8 @@ func UpServer() (*grpc.Server, net.Listener, error) {
 func TestCreateOrderSuccess(t *testing.T) {
 	grpcServer, listen, err := UpServer()
 	accounting := accounting.NewService(true)
-	orders := NewService(accounting, true)
+	datapool := datapool.NewService(accounting, true)
+	orders := NewService(accounting, datapool, true)
 	endpoint := NewEndpoint(orders, accounting)
 	go func() {
 		pb.RegisterOrdersServer(grpcServer, endpoint)
@@ -64,7 +66,7 @@ func TestCreateOrderSuccess(t *testing.T) {
 		}
 	}
 
-	_, err = accounting.CreateDatapoolAndSelectHolders(testClientId, 0, 1)
+	createdp, err := datapool.CreateDatapool(testClientId, 1)
 	if err != nil {
 		t.Fatalf("want no error, but has error %#v", err)
 	}
@@ -77,7 +79,7 @@ func TestCreateOrderSuccess(t *testing.T) {
 	client := pb.NewOrdersClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	orderInfo, err := client.RequestValidatableCode(ctx, &pb.ValidatableCodeRequest{Userid: testClientId, Add: 10})
+	orderInfo, err := client.RequestValidatableCode(ctx, &pb.ValidatableCodeRequest{Datapoolid: createdp.DatapoolId, Add: 10})
 	t.Logf("%#v aaa", orderInfo)
 	if err != nil {
 		t.Fatalf("failed test %#v", err)
@@ -97,12 +99,19 @@ func TestValidateCode(t *testing.T) {
 		}
 	}
 
-	holder, err := accounting.CreateDatapoolAndSelectHolders(testClientId, 0, 1)
+	datapoolSv := datapool.NewService(accounting, true)
+
+	createdDp, err := datapoolSv.CreateDatapool(testClientId, 1)
+	if err != nil {
+		t.Fatalf("want no error,but error %#v", err)
+	}
+
+	holder, err := datapoolSv.AddHolders(createdDp.DatapoolId, 0, 1)
 	if err != nil {
 		t.Fatalf("failed to registar holder %#v", err)
 	}
 
-	orderService := NewService(accounting, true)
+	orderService := NewService(accounting, datapoolSv, true)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -141,10 +150,15 @@ func TestGetValidatableCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("want no error,but has error %#v", err)
 	}
-	order := NewService(accounting, true)
+	datapoolSv := datapool.NewService(accounting, true)
+	createdDp, err := datapoolSv.CreateDatapool(testClientId, 1)
+	if err != nil {
+		t.Fatalf("want no error,but has error %#v", err)
+	}
+	order := NewService(accounting, datapoolSv, true)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	vcode, _, err := order.GetValidatableCode(ctx, testClientId, 1)
+	vcode, _, err := order.GetValidatableCode(ctx, createdDp.DatapoolId, 1)
 	if err != nil {
 		t.Fatalf("want no error,but has error %#v", err)
 	}
@@ -161,7 +175,9 @@ func TestServiceRunAndStop(t *testing.T) {
 	}
 	accounting.CreateNewClient(testClientId)
 
-	order := NewService(accounting, true)
+	datapoolSv := datapool.NewService(accounting, true)
+
+	order := NewService(accounting, datapoolSv, true)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
