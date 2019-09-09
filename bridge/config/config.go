@@ -6,7 +6,8 @@ type ServerConfig struct {
 }
 
 type OrderConfig struct {
-	ErrorProbability float64
+	ErrorProbability  float64
+	NeedValidationNum int //承認されるまでに必要なバリデーターの数
 }
 
 type BridgeConfig struct {
@@ -26,6 +27,7 @@ func ReadBridgeConfig() (*BridgeConfig, error) {
 	config.Order = &OrderConfig{}
 
 	config.Order.ErrorProbability = 0.1
+	config.Order.NeedValidationNum = 1
 
 	return config, nil
 }

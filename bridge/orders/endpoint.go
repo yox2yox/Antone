@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"time"
 	"yox2yox/antone/bridge/accounting"
+	"yox2yox/antone/bridge/config"
 	pb "yox2yox/antone/bridge/pb"
 )
 
@@ -15,21 +16,21 @@ type Worker struct {
 }
 
 type Endpoint struct {
+	Config     *config.OrderConfig
 	Orders     *Service
 	Accounting *accounting.Service
-	PickNum    int
 }
 
-func NewEndpoint(orders *Service, accounting *accounting.Service) *Endpoint {
+func NewEndpoint(config *config.OrderConfig, orders *Service, accounting *accounting.Service) *Endpoint {
 	return &Endpoint{
 		Orders:     orders,
 		Accounting: accounting,
-		PickNum:    1,
+		Config:     config,
 	}
 }
 
 func (e *Endpoint) RequestValidatableCode(ctx context.Context, vCodeRequest *pb.ValidatableCodeRequest) (*pb.ValidatableCode, error) {
-	if e.Accounting.GetWorkersCount() < e.PickNum {
+	if e.Accounting.GetWorkersCount() < e.Config.NeedValidationNum {
 		return nil, errors.New("There are not enough Wokers")
 	}
 	rand.Seed(time.Now().UnixNano())
@@ -42,7 +43,7 @@ func (e *Endpoint) RequestValidatableCode(ctx context.Context, vCodeRequest *pb.
 		return nil, err
 	}
 
-	e.Orders.AddValidationRequest(vCodeRequest.Datapoolid, e.PickNum, holderId, vcode)
+	e.Orders.AddValidationRequest(vCodeRequest.Datapoolid, e.Config.NeedValidationNum, holderId, vcode)
 
 	return vcode, nil
 

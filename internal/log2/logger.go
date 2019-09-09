@@ -11,17 +11,27 @@ var debugfile *os.File
 var errfile *os.File
 
 func init() {
-	file, err := os.OpenFile(`../log/debug.log`, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile("log/debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		panic(err)
+		Debug = log.New(os.Stdout, "[DEBUG]", log.LstdFlags)
+	} else {
+		Debug = log.New(file, "[DEBUG]", log.LstdFlags)
+		debugfile = file
 	}
-	errfile, err = os.OpenFile(`../log/error.log`, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	Debug = log.New(file, "[DEBUG]", log.LstdFlags)
-	debugfile = file
-	Err = log.New(errfile, "[ERROR]", log.LstdFlags)
+	errfile, err = os.OpenFile("log/error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		Err = log.New(os.Stderr, "[ERROR]", log.LstdFlags)
+	} else {
+		Err = log.New(errfile, "[ERROR]", log.LstdFlags)
+	}
+
 }
 
 func Close() {
-	debugfile.Close()
-	errfile.Close()
+	if debugfile != nil {
+		debugfile.Close()
+	}
+	if errfile != nil {
+		errfile.Close()
+	}
 }

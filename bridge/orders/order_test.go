@@ -4,14 +4,15 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"sync"
 	"testing"
 	"time"
-	"os"
-	"yox2yox/antone/internal/log2"
 	"yox2yox/antone/bridge/accounting"
+	"yox2yox/antone/bridge/config"
 	"yox2yox/antone/bridge/datapool"
 	pb "yox2yox/antone/bridge/pb"
+	"yox2yox/antone/internal/log2"
 
 	"google.golang.org/grpc"
 )
@@ -60,7 +61,11 @@ func TestCreateOrderSuccess(t *testing.T) {
 	accounting := accounting.NewService(true)
 	datapool := datapool.NewService(accounting, true)
 	orders := NewService(accounting, datapool, true)
-	endpoint := NewEndpoint(orders, accounting)
+	config, err := config.ReadBridgeConfig()
+	if err != nil {
+		t.Fatalf("want no error, but error %#v", err)
+	}
+	endpoint := NewEndpoint(config.Order, orders, accounting)
 	go func() {
 		pb.RegisterOrdersServer(grpcServer, endpoint)
 		grpcServer.Serve(listen)
@@ -69,6 +74,7 @@ func TestCreateOrderSuccess(t *testing.T) {
 		}
 	}()
 	defer grpcServer.Stop()
+	defer listen.Close()
 
 	for _, workerid := range testWorkersId {
 		_, err = accounting.CreateNewWorker(workerid, testWorkerAddr)

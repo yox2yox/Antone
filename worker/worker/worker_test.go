@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"testing"
 	"time"
-	"os"
 	"yox2yox/antone/internal/log2"
 	"yox2yox/antone/worker/datapool"
 	pb "yox2yox/antone/worker/pb"
@@ -98,6 +98,7 @@ func TestWorkerEndpoint_GetValidatableCodeNotExist_Fail(t *testing.T) {
 		}
 	}()
 	defer grpcServer.Stop()
+	defer listen.Close()
 
 	//クライアント部
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())

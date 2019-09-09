@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 	"yox2yox/antone/bridge"
@@ -36,6 +37,7 @@ func Test_CreateNetWork(t *testing.T) {
 	workerscount := 6
 	workersAddr := "127.0.0.1"
 	workersBasePort := 10001
+	wg := sync.WaitGroup{}
 
 	var wpeers []*wPeer.Peer
 
@@ -49,14 +51,14 @@ func Test_CreateNetWork(t *testing.T) {
 		t.Fatalf("want no error, but has error %#v", err)
 	}
 	ctxBridge, cancelBridge := context.WithTimeout(context.Background(), 10*time.Second)
+	wg.Add(1)
 	go func() {
 		err = bpeer.Run(ctxBridge)
 		if err != nil {
 			t.Fatalf("want no error, but has error %#v", err)
 		}
+		wg.Done()
 	}()
-	defer bpeer.Close()
-	defer cancelBridge()
 
 	//ワーカPeer起動
 	for i := 0; i < workerscount; i++ {
@@ -72,14 +74,15 @@ func Test_CreateNetWork(t *testing.T) {
 		}
 		wpeers = append(wpeers, wpeer)
 		ctxworker, cancelworker := context.WithTimeout(context.Background(), 10*time.Second)
+		wg.Add(1)
 		go func() {
 			err = wpeer.Run(ctxworker)
 			if err != nil {
 				t.Fatalf("want no error, but has error %#v", err)
 			}
+			wg.Done()
 		}()
 		defer cancelworker()
-		defer wpeer.Close()
 	}
 
 	time.Sleep(1 * time.Second)
@@ -365,5 +368,12 @@ func Test_CreateNetWork(t *testing.T) {
 	if countholder < 1 {
 		t.Fatalf("want holders count is 1 ,but %#v", countholder)
 	}
+
+	bpeer.Close()
+	cancelBridge()
+	for _, wpeer := range wpeers {
+		wpeer.Close()
+	}
+	wg.Wait()
 
 }
