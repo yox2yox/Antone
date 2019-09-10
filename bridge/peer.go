@@ -55,7 +55,7 @@ func New(config *config.BridgeConfig, debug bool) (*Peer, error) {
 	}
 
 	{ //setup orders
-		peer.Orders = orders.NewService(peer.Accounting, peer.Datapool, debug)
+		peer.Orders = orders.NewService(peer.Accounting, peer.Datapool, debug, peer.Config.Order.CalcErrorRate)
 		pb.RegisterOrdersServer(peer.GrpcServer, orders.NewEndpoint(peer.Config.Order, peer.Orders, peer.Accounting))
 	}
 

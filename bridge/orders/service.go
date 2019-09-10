@@ -9,6 +9,7 @@ import (
 	"yox2yox/antone/bridge/accounting"
 	"yox2yox/antone/bridge/datapool"
 	pb "yox2yox/antone/bridge/pb"
+	"yox2yox/antone/internal/log2"
 	workerpb "yox2yox/antone/worker/pb"
 
 	"google.golang.org/grpc"
@@ -40,16 +41,26 @@ type Service struct {
 	Datapool                    *datapool.Service
 	Running                     bool
 	WithoutConnectRemoteForTest bool
+	CalcER                      bool
+	ErrCount                    int
+	FailedCount                 int
+	SuccessCount                int
+	RejectedCount               int
 	stopChan                    chan struct{}
 }
 
-func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool) *Service {
+func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool) *Service {
 	return &Service{
 		ValidationRequests:          []*ValidationRequest{},
 		Accounting:                  accounting,
 		Datapool:                    datapool,
 		Running:                     false,
 		WithoutConnectRemoteForTest: withoutConnectRemoteForTest,
+		CalcER:                      calcER,
+		ErrCount:                    0,
+		SuccessCount:                0,
+		FailedCount:                 0,
+		RejectedCount:               0,
 		stopChan:                    make(chan struct{}),
 	}
 }
@@ -351,6 +362,28 @@ func (s *Service) Run() {
 						ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 						defer cancel()
 						results, conclusion, _ := s.ValidateCode(ctx, vreq.Neednum, vreq.HolderId, vreq.ValidatableCode)
+						//CalcERモードの時、結果をログに出力
+						if s.CalcER {
+							if results == nil || conclusion == nil {
+								s.Lock()
+								s.ErrCount += 1
+								s.Unlock()
+							} else {
+								if conclusion.IsRejected {
+									s.RejectedCount += 1
+								} else if conclusion.IsError {
+									s.ErrCount += 1
+								} else {
+									want := vreq.ValidatableCode.Data + vreq.ValidatableCode.Add
+									if want == conclusion.Data {
+										s.SuccessCount += 1
+									} else {
+										s.FailedCount += 1
+									}
+								}
+							}
+							log2.TestER.Printf("Validation Complete SUC[%d] FAIL[%d] ERR[%d] REJ[%d]", s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount)
+						}
 						//結果から評価値を登録
 						if results != nil {
 							fmt.Printf("INFO %s [] END - Validations by remote workers", time.Now())

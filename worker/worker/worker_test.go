@@ -97,8 +97,8 @@ func TestWorkerEndpoint_GetValidatableCodeNotExist_Fail(t *testing.T) {
 			t.Fatalf("failed test %#v", err)
 		}
 	}()
-	defer grpcServer.Stop()
 	defer listen.Close()
+	defer grpcServer.Stop()
 
 	//クライアント部
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())

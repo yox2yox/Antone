@@ -60,7 +60,7 @@ func TestCreateOrderSuccess(t *testing.T) {
 	grpcServer, listen, err := UpServer()
 	accounting := accounting.NewService(true)
 	datapool := datapool.NewService(accounting, true)
-	orders := NewService(accounting, datapool, true)
+	orders := NewService(accounting, datapool, true, false)
 	config, err := config.ReadBridgeConfig()
 	if err != nil {
 		t.Fatalf("want no error, but error %#v", err)
@@ -128,7 +128,7 @@ func TestValidateCode(t *testing.T) {
 		t.Fatalf("failed to registar holder %#v", err)
 	}
 
-	orderService := NewService(accounting, datapoolSv, true)
+	orderService := NewService(accounting, datapoolSv, true, false)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -172,7 +172,7 @@ func TestGetValidatableCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("want no error,but has error %#v", err)
 	}
-	order := NewService(accounting, datapoolSv, true)
+	order := NewService(accounting, datapoolSv, true, false)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	vcode, _, err := order.GetValidatableCode(ctx, createdDp.DatapoolId, 1)
@@ -194,7 +194,7 @@ func TestServiceRunAndStop(t *testing.T) {
 
 	datapoolSv := datapool.NewService(accounting, true)
 
-	order := NewService(accounting, datapoolSv, true)
+	order := NewService(accounting, datapoolSv, true, false)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
