@@ -30,9 +30,6 @@ var (
 )
 
 func (e *Endpoint) GetValidatableCode(ctx context.Context, vCodeRequest *pb.ValidatableCodeRequest) (*pb.ValidatableCode, error) {
-	if e.BadMode {
-		return &pb.ValidatableCode{Data: -1, Add: 0}, nil
-	}
 	datapoolid := vCodeRequest.Datapoolid
 	data, err := e.Datapool.GetDataPool(datapoolid)
 	if err == datapool.ErrDataPoolNotExist {
@@ -44,6 +41,9 @@ func (e *Endpoint) GetValidatableCode(ctx context.Context, vCodeRequest *pb.Vali
 }
 
 func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.ValidatableCode) (*pb.ValidationResult, error) {
+	if e.BadMode {
+		return &pb.ValidationResult{Pool: -1, Reject: false}, nil
+	}
 	pool := validatableCode.Data + validatableCode.Add
 	return &pb.ValidationResult{Pool: pool, Reject: false}, nil
 }
