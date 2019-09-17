@@ -42,6 +42,8 @@ func main() {
 		badmode = true
 	}
 
+	log2.Debug.Printf("Addr:%s Bridge:%s Id:%s BadMode:%v", config.Server.Addr, config.Bridge.Addr, config.Bridge.AccountId, badmode)
+
 	if err != nil {
 		log2.Err.Println("failed to read config")
 		return
