@@ -13,7 +13,7 @@ import (
 
 var (
 	addrOpt       = flag.String("a", "", "help message for \"a\" option")
-	bridgeAddrOpt = flag.String("r", "", "help message for \"r\" option")
+	bridgeAddrOpt = flag.String("bridge", "", "help message for \"bridge\" option")
 	idOpt         = flag.String("id", "", "help message for \"id\" option")
 	badModeOpt    = flag.Bool("bad", false, "help message for \"bad\" option")
 )
