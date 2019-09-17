@@ -12,20 +12,28 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	bridgeAddrOpt = flag.String("bridge", "", "help message for \"bridge\" option")
+	intervalOpt   = flag.Int("intv", -1, "help message for \"intv\" option")
+)
+
 func main() {
 
 	bridgeAddr := ""
 	myUserId := "client0"
 	myAddr := "192.168.25.10"
-	var sendIntervalMilliSec time.Duration = 500
+	var sendIntervalMilliSec int = 500
 	holdersnum := 3
 	doneChannel := make(chan struct{})
 
 	flag.Parse()
-	args := flag.Args()
 
-	if len(args) > 1 && args[0] != "" {
-		bridgeAddr = args[0]
+	if *bridgeAddrOpt != "" {
+		bridgeAddr = *bridgeAddrOpt
+	}
+
+	if *intervalOpt > 0 {
+		sendIntervalMilliSec = *intervalOpt
 	}
 
 	//ブリッジクライアント作成
@@ -62,7 +70,7 @@ func main() {
 				req := &bpb.ValidatableCodeRequest{Datapoolid: myDatapool.Datapoolid, Add: 1}
 				clientOrder.RequestValidatableCode(ctxOrder, req)
 			}
-			time.Sleep(sendIntervalMilliSec * time.Millisecond)
+			time.Sleep(time.Duration(sendIntervalMilliSec) * time.Millisecond)
 		}
 	}()
 
