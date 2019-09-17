@@ -139,6 +139,12 @@ func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.Valida
 }
 
 func (s *Service) dequeueValidationRequest() *ValidationRequest {
+	s.RLock()
+	count := len(s.ValidationRequests)
+	s.RUnlock()
+	if count <= 0 {
+		return nil
+	}
 	s.Lock()
 	tmp := s.ValidationRequests[0]
 	s.ValidationRequests = s.ValidationRequests[1:]
@@ -349,6 +355,9 @@ func (s *Service) Run() {
 				var vreq *ValidationRequest = nil
 				for available == false {
 					vreq = s.dequeueValidationRequest()
+					if vreq == nil {
+						break
+					}
 					available = s.IsTheDatapoolAvailable(vreq.DatapoolId)
 					if available == false {
 						waitingvreq = append(waitingvreq, vreq)
