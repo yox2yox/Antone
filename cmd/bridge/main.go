@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	addrOpt = flag.String("a", "", "help message for \"a\" option")
+	addrOpt          = flag.String("a", "", "help message for \"a\" option")
+	validatorsNumOpt = flag.Int("validators", 1, "help message for \"validators\" option")
 )
 
 func main() {
@@ -31,6 +32,10 @@ func main() {
 
 	if *addrOpt != "" {
 		config.Server.Addr = *addrOpt
+	}
+
+	if *validatorsNumOpt != 1 {
+		config.Order.NeedValidationNum = *validatorsNumOpt
 	}
 
 	peer, err := bridge.New(config, false)
