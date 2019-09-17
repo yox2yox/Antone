@@ -11,10 +11,16 @@ import (
 	"yox2yox/antone/worker/config"
 )
 
+var (
+	addrOpt       = flag.String("a", "", "help message for \"a\" option")
+	bridgeAddrOpt = flag.String("r", "", "help message for \"r\" option")
+	idOpt         = flag.String("id", "", "help message for \"id\" option")
+	badModeOpt    = flag.Bool("bad", false, "help message for \"bad\" option")
+)
+
 func main() {
 
 	flag.Parse()
-	args := flag.Args()
 	badmode := false
 
 	defer log2.Close()
@@ -23,16 +29,16 @@ func main() {
 
 	log2.Debug.Println("start main function")
 	config, err := config.ReadWorkerConfig()
-	if len(args) > 1 && args[0] != "" {
-		config.Server.Addr = args[0]
+	if *addrOpt != "" {
+		config.Server.Addr = *addrOpt
 	}
-	if len(args) > 2 && args[1] != "" {
-		config.Bridge.Addr = args[1]
+	if *bridgeAddrOpt != "" {
+		config.Bridge.Addr = *bridgeAddrOpt
 	}
-	if len(args) > 3 {
-		config.Bridge.AccountId = args[2]
+	if *idOpt != "" {
+		config.Bridge.AccountId = *idOpt
 	}
-	if len(args) > 4 && args[3] == "true" {
+	if *badModeOpt == true {
 		badmode = true
 	}
 
