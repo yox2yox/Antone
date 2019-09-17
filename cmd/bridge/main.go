@@ -12,20 +12,25 @@ import (
 	"yox2yox/antone/internal/log2"
 )
 
+var (
+	addrOpt = flag.String("a", "", "help message for \"a\" option")
+)
+
 func main() {
 
 	flag.Parse()
-	args := flag.Args()
 
 	defer log2.Close()
+
+	log2.Debug.Println("starting main function...")
 
 	config, err := config.ReadBridgeConfig()
 	if err != nil {
 		fmt.Printf("FATAL %s [] Failed to read config", time.Now())
 	}
 
-	if len(args) > 1 && args[0] != "" {
-		config.Server.Addr = args[0]
+	if *addrOpt != "" {
+		config.Server.Addr = *addrOpt
 	}
 
 	peer, err := bridge.New(config, false)
