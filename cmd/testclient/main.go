@@ -20,7 +20,7 @@ var (
 func main() {
 
 	bridgeAddr := ""
-	myUserId := "client0"
+	myUserId := "client3"
 	myAddr := "192.168.25.10"
 	var sendIntervalMilliSec int = 500
 	holdersnum := 3

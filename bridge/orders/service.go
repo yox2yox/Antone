@@ -109,7 +109,7 @@ func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add
 	if err != nil {
 		return nil, "", err
 	}
-	var vcode *pb.ValidatableCode
+	var vcode *pb.ValidatableCode = nil
 	if s.WithoutConnectRemoteForTest {
 		vcode = &pb.ValidatableCode{
 			Data: 0,
@@ -121,17 +121,25 @@ func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add
 			return nil, holder.Id, err
 		}
 	}
-	return vcode, holder.Id, nil
+	if vcode == nil {
+		return nil, holder.Id, ErrGottenDataIsNil
+	} else {
+		return vcode, holder.Id, nil
+	}
 }
 
 func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.ValidatableCode) *ValidationResult {
 	conn, err := grpc.Dial(worker.Addr, grpc.WithInsecure())
+	if err != nil {
+		log2.Err.Printf("failed to connect to remote %#v", err)
+	}
 	workerClient := workerpb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add}
 	validationResult, err := workerClient.OrderValidation(ctx, vCodeWorker)
 	if err != nil {
+		log2.Err.Printf("failed to validation on remote %#v", err)
 		return &ValidationResult{WorkerId: worker.Id, Data: 0, IsRejected: false, IsError: true}
 	} else {
 		return &ValidationResult{WorkerId: worker.Id, Data: validationResult.Pool, IsRejected: false, IsError: false}
@@ -171,28 +179,30 @@ func (s *Service) addWaitingList(userId string) {
 //waitlistから削除
 func (s *Service) removeWaitingList(userId string) {
 	newlist := []string{}
-	s.RLock()
+	s.Lock()
 	for _, waitId := range s.WaitingRequestsId {
 		if waitId != userId {
 			newlist = append(newlist, waitId)
 		}
 	}
-	s.RUnlock()
-
-	s.Lock()
 	s.WaitingRequestsId = newlist
 	s.Unlock()
 }
 
 //結果リストから、必要な追加ワーカ数および最も多数だった結果を返す
 func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []ValidationResult) (int, ValidationResult) {
+
+	log2.Debug.Printf("start to calculate conclusion")
+
 	//TODO: 確率を計算する
 	resultmap := map[int32]int{}
 	rejects := 0
 	for _, res := range results {
 		if res.IsRejected {
 			rejects += 1
+			log2.Debug.Printf("calc is rejected %d", rejects)
 		} else if !res.IsError {
+			log2.Debug.Printf("result is %d", res.Data)
 			_, exist := resultmap[res.Data]
 			if exist {
 				resultmap[res.Data] += 1
@@ -201,6 +211,7 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []Valid
 			}
 		}
 	}
+	log2.Debug.Printf("result is rejected from %d workers", rejects)
 
 	//TODO: 同率の場合の処理
 	maxcount := -1
@@ -211,6 +222,7 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []Valid
 			resdata = data
 		}
 	}
+	log2.Debug.Printf("RESULT[%d] is selected from %d workers", resdata, maxcount)
 
 	var need int
 	conclusion := ValidationResult{}
@@ -231,6 +243,7 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []Valid
 	}
 
 	half := s.Accounting.GetWorkersCount()/2 + 1
+	log2.Debug.Printf("half of workers is %d", half)
 	needhalf := half - maxcount
 	if needhalf < 0 {
 		needhalf = 0
@@ -253,11 +266,16 @@ func (s *Service) commitReputation(holderId string, results []ValidationResult, 
 	}
 	for _, res := range results {
 		confirmed := false
-		if res.Data == conclusion.Data && res.IsError == false {
-			confirmed = true
-		}
-		if res.IsRejected == true && res.IsError == false && conclusion.IsRejected == true {
-			confirmed = true
+		//TODO: nilチェック
+		if conclusion == nil {
+			confirmed = false
+		} else {
+			if res.Data == conclusion.Data && res.IsError == false {
+				confirmed = true
+			}
+			if res.IsRejected == true && res.IsError == false && conclusion.IsRejected == true {
+				confirmed = true
+			}
 		}
 		s.Accounting.UpdateReputation(res.WorkerId, confirmed)
 	}
@@ -266,7 +284,7 @@ func (s *Service) commitReputation(holderId string, results []ValidationResult, 
 //ValidatableCodeを検証
 func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string, vCode *pb.ValidatableCode) ([]ValidationResult, *ValidationResult, error) {
 
-	anavailable := []string{}
+	unavailable := []string{}
 	waitlist := []string{}
 	results := []ValidationResult{}
 	var conclusion *ValidationResult
@@ -278,8 +296,9 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 
 	for {
 		if nextpick > 0 {
+			log2.Debug.Printf("start to pick %d validators", nextpick)
 			//ワーカー取得
-			pickedWorkers, err := s.Accounting.SelectValidationWorkers(nextpick, anavailable)
+			pickedWorkers, err := s.Accounting.SelectValidationWorkers(nextpick, unavailable)
 
 			if err == nil {
 				nextpick = 0
@@ -287,7 +306,7 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 				for _, worker := range pickedWorkers {
 					pickedIDs = append(pickedIDs, worker.Id)
 				}
-				anavailable = append(anavailable, pickedIDs...)
+				unavailable = append(unavailable, pickedIDs...)
 				waitlist = append(waitlist, pickedIDs...)
 
 				//各ワーカにValidationリクエスト送信
@@ -299,13 +318,6 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 						}(worker)
 					} else {
 						go func(target *accounting.Worker) {
-							tmp := []string{}
-							for _, id := range waitlist {
-								if id != target.Id {
-									tmp = append(tmp, id)
-								}
-							}
-							waitlist = tmp
 							resultChan <- &ValidationResult{WorkerId: target.Id, Data: 10, IsRejected: false, IsError: false}
 						}(worker)
 					}
@@ -317,13 +329,26 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 
 		select {
 		case res := <-resultChan:
+			log2.Debug.Printf("get validation result DATA[%d] FROM[%s] REJECT[%v]", res.Data, res.WorkerId, res.IsRejected)
+			tmp := []string{}
+			s.Lock()
+			for _, id := range waitlist {
+				if id != res.WorkerId {
+					tmp = append(tmp, id)
+				}
+			}
+			waitlist = tmp
+			s.Unlock()
+			log2.Debug.Printf("delete ID[%s] from waitlist WAITING[%d]", res.WorkerId, len(waitlist))
 			results = append(results, *res)
 			var needworker int
 			needworker, concval := s.calcNeedAdditionalWorkerAndResult(picknum, results)
+			log2.Debug.Printf("need %d more result", needworker)
 			conclusion = &concval
 			if needworker > 0 {
 				conclusion = nil
 				nextpick = needworker - len(waitlist)
+				log2.Debug.Printf("nextpick is %d", nextpick)
 				if nextpick < 0 {
 					nextpick = 0
 				}
@@ -347,7 +372,6 @@ func (s *Service) Run() {
 			return
 		default:
 			if len(s.ValidationRequests) > 0 {
-				fmt.Printf("DEBUG %s [] Got order to validate\n", time.Now())
 
 				//利用可能なリクエストが出てくるまでループ
 				waitingvreq := []*ValidationRequest{}
@@ -365,12 +389,18 @@ func (s *Service) Run() {
 				}
 
 				if vreq != nil && available == true {
+					log2.Debug.Printf("Got order to validate")
 					//WaitingListに追加
 					s.addWaitingList(vreq.DatapoolId)
 					go func() {
 						ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 						defer cancel()
-						results, conclusion, _ := s.ValidateCode(ctx, vreq.Neednum, vreq.HolderId, vreq.ValidatableCode)
+						results, conclusion, err := s.ValidateCode(ctx, vreq.Neednum, vreq.HolderId, vreq.ValidatableCode)
+
+						if err != nil {
+							log2.Err.Printf("failed to validation %#v", err)
+						}
+
 						//CalcERモードの時、結果をログに出力
 						if s.CalcER {
 							if results == nil || conclusion == nil {
