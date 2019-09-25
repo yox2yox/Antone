@@ -108,6 +108,7 @@ func (s *Service) FetcheDatapoolFromRemote(datapoolId string) (data int32, faile
 			return 0, []string{}, err
 		}
 		conn, err := grpc.Dial(holder.Addr, grpc.WithInsecure())
+		defer conn.Close()
 		if err != nil {
 			exceptions = append(exceptions, holder.Id)
 		} else {
@@ -193,6 +194,7 @@ func (s *Service) AddHolders(datapoolid string, data int32, num int) ([]*account
 				defer wg.Done()
 				log2.Debug.Printf("start sending cretate datapool request to %s\n", target.Addr)
 				conn, err := grpc.Dial(target.Addr, grpc.WithInsecure())
+				defer conn.Close()
 				if err != nil {
 					log2.Err.Printf("failed to connect to %s\n", target.Addr)
 					return
@@ -263,6 +265,7 @@ func (s *Service) UpdateDatapoolRemote(datapoolid string, data int32) error {
 			defer wg.Done()
 			log2.Debug.Printf("start access to %s\n", target.Addr)
 			conn, err := grpc.Dial(target.Addr, grpc.WithInsecure())
+			defer conn.Close()
 			if err != nil {
 				log2.Err.Printf("failed to access to %s\n", target.Addr)
 				mulocal.Lock()
@@ -271,7 +274,6 @@ func (s *Service) UpdateDatapoolRemote(datapoolid string, data int32) error {
 				return
 			}
 			log2.Debug.Printf("success to access to %s\n", target.Addr)
-			defer conn.Close()
 			dpClient := workerpb.NewDatapoolClient(conn)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()

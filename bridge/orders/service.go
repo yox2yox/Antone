@@ -81,6 +81,7 @@ func (s *Service) getValidatableCodeRemote(holder accounting.Worker, datapoolId 
 	conn, err := grpc.Dial(holder.Addr, grpc.WithInsecure())
 	client := workerpb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer conn.Close()
 	defer cancel()
 	req := &workerpb.ValidatableCodeRequest{Datapoolid: datapoolId, Add: add}
 	vcode, err := client.GetValidatableCode(ctx, req)
