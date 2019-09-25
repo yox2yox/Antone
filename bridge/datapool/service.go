@@ -365,6 +365,7 @@ func (s *Service) deleteDatapoolOnRemote(datapoolId string, workerId string) err
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 	datapoolClient := workerpb.NewDatapoolClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

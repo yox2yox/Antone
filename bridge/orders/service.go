@@ -134,6 +134,7 @@ func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.Valida
 	if err != nil {
 		log2.Err.Printf("failed to connect to remote %#v", err)
 	}
+	defer conn.Close()
 	workerClient := workerpb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
