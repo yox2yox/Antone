@@ -7,7 +7,11 @@ import (
 var e = 2.718281828459045
 
 func CalcWorkerCred(f float64, reputation int) float64 {
-	return 1 - (f/(1-f))*(1/(float64(reputation)*e))
+	if reputation > 0 {
+		return 1 - (f/(1-f))*(1/(float64(reputation)*e))
+	} else {
+		return 1 - f
+	}
 }
 
 func CalcRGroupCred(targetidx int, groups [][]float64) float64 {

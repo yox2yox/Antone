@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 	"yox2yox/antone/internal/log2"
+	"yox2yox/antone/pkg/stolerance"
 )
 
 type Client struct {
@@ -14,17 +15,20 @@ type Client struct {
 }
 
 type Worker struct {
-	Addr       string
-	Id         string
-	Reputation int
-	Holdinds   []string
+	Addr        string
+	Id          string
+	Reputation  int
+	Credibility float64
+	Holdinds    []string
 }
 
 type Service struct {
 	sync.RWMutex
-	Workers   map[string]*Worker
-	Clients   map[string]*Client
-	WorkersId []string
+	Workers            map[string]*Worker
+	Clients            map[string]*Client
+	WorkersId          []string
+	AverageCredibility float64
+	FaultyFraction     float64
 	//Holders                     map[string][]string
 	WithoutConnectRemoteForTest bool
 }
@@ -42,9 +46,11 @@ var (
 
 func NewService(withoutConnectRemoteForTest bool) *Service {
 	return &Service{
-		Workers:   map[string]*Worker{},
-		Clients:   map[string]*Client{},
-		WorkersId: []string{},
+		Workers:            map[string]*Worker{},
+		Clients:            map[string]*Client{},
+		WorkersId:          []string{},
+		AverageCredibility: 0.7,
+		FaultyFraction:     0.4,
 		//Holders:                     map[string][]string{},
 		WithoutConnectRemoteForTest: withoutConnectRemoteForTest,
 	}
@@ -121,16 +127,19 @@ func (s *Service) CreateNewWorker(workerId string, Addr string) (*Worker, error)
 		log2.Err.Printf("failed to create new worker %s", ErrIDAlreadyExists)
 		return nil, ErrIDAlreadyExists
 	}
+	cred := stolerance.CalcWorkerCred(s.FaultyFraction, 0)
 	worker := &Worker{
-		Addr:       Addr,
-		Id:         workerId,
-		Reputation: 0,
-		Holdinds:   []string{},
+		Addr:        Addr,
+		Id:          workerId,
+		Reputation:  0,
+		Credibility: cred,
+		Holdinds:    []string{},
 	}
 	s.Lock()
 	s.Workers[workerId] = worker
 	s.WorkersId = append(s.WorkersId, workerId)
 	s.Unlock()
+	s.calcAverageCredibility()
 	log2.Debug.Printf("success to create new worker ID[%s]", workerId)
 	return worker, nil
 }
@@ -217,14 +226,29 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool) (int, error)
 		s.Lock()
 		s.Workers[workerId].Reputation += 1
 		rep = s.Workers[workerId].Reputation
+		s.Workers[workerId].Credibility = stolerance.CalcWorkerCred(s.FaultyFraction, rep)
 		s.Unlock()
+		s.calcAverageCredibility()
 	} else {
 		s.Lock()
 		s.Workers[workerId].Reputation -= 1
 		rep = s.Workers[workerId].Reputation
+		s.Workers[workerId].Credibility = stolerance.CalcWorkerCred(s.FaultyFraction, rep)
 		s.Unlock()
+		s.calcAverageCredibility()
 	}
 	log2.Debug.Printf("success to update the reputation of WORKER[%s] to %d", workerId, rep)
 	return s.Workers[workerId].Reputation, nil
 
+}
+
+func (s *Service) calcAverageCredibility() float64 {
+	sum := 0.0
+	for _, worker := range s.Workers {
+		sum += worker.Credibility
+	}
+	s.Lock()
+	s.AverageCredibility = sum / float64(len(s.Workers))
+	s.Unlock()
+	return s.calcAverageCredibility()
 }
