@@ -250,5 +250,5 @@ func (s *Service) calcAverageCredibility() float64 {
 	s.Lock()
 	s.AverageCredibility = sum / float64(len(s.Workers))
 	s.Unlock()
-	return s.calcAverageCredibility()
+	return s.AverageCredibility
 }
