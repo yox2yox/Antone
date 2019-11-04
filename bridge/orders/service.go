@@ -10,13 +10,15 @@ import (
 	"yox2yox/antone/bridge/datapool"
 	pb "yox2yox/antone/bridge/pb"
 	"yox2yox/antone/internal/log2"
+	"yox2yox/antone/pkg/stolerance"
 	workerpb "yox2yox/antone/worker/pb"
 
 	"google.golang.org/grpc"
 )
 
 var (
-	ErrGottenDataIsNil = errors.New("You got data but it's nil")
+	ErrGottenDataIsNil        = errors.New("You got data but it's nil")
+	ErrFailedToCalcNeedWorker = errors.New("Failed to calclate need worker count")
 )
 
 type ValidationRequest struct {
@@ -196,65 +198,132 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []Valid
 
 	log2.Debug.Printf("start to calculate conclusion")
 
-	//TODO: 確率を計算する
-	resultmap := map[int32]int{}
-	rejects := 0
+	resultmap := map[int32][]float64{}
+	rejected := []float64{}
 	for _, res := range results {
-		if res.IsRejected {
-			rejects += 1
-			log2.Debug.Printf("calc is rejected %d", rejects)
-		} else if !res.IsError {
-			log2.Debug.Printf("result is %d", res.Data)
-			_, exist := resultmap[res.Data]
-			if exist {
-				resultmap[res.Data] += 1
-			} else {
-				resultmap[res.Data] = 1
+		worker, err := s.Accounting.GetWorker(res.WorkerId)
+		if err != nil {
+			if res.IsRejected {
+				rejected = append(rejected, worker.Credibility)
+				log2.Debug.Printf("calc is rejected by %s", worker.Id)
+			} else if !res.IsError {
+				log2.Debug.Printf("result is %d", res.Data)
+				_, exist := resultmap[res.Data]
+				if exist {
+					resultmap[res.Data] = append(resultmap[res.Data], worker.Credibility)
+				} else {
+					resultmap[res.Data] = []float64{}
+				}
 			}
 		}
 	}
-	log2.Debug.Printf("result is rejected from %d workers", rejects)
 
-	//TODO: 同率の場合の処理
-	maxcount := -1
-	resdata := int32(0)
-	for data, count := range resultmap {
-		if count > maxcount {
-			maxcount = count
-			resdata = data
-		}
+	resultData := []int32{}
+	credsGroups := [][]float64{}
+	for data, res := range resultmap {
+		credsGroups = append(credsGroups, res)
+		resultData = append(resultData, data)
 	}
-	log2.Debug.Printf("RESULT[%d] is selected from %d workers", resdata, maxcount)
+	credsGroups = append(credsGroups, rejected)
 
-	var need int
-	conclusion := ValidationResult{}
-	if maxcount > rejects {
-		conclusion.IsRejected = false
-		conclusion.IsError = false
-		conclusion.Data = resdata
-		need = picknum - maxcount
+	count, group := stolerance.CalcNeedWorkerCountAndBestGroup(s.Accounting.AverageCredibility, credsGroups, s.Accounting.CredibilityThreshould)
+
+	if count < 0 || group < 0 {
+		return -1, ValidationResult{}
 	} else {
-		conclusion.IsRejected = true
-		conclusion.IsError = false
-		conclusion.Data = 0
-		need = picknum - rejects
+		var valResult ValidationResult
+		alreadyGetCount := 0
+		if group >= len(resultData) {
+			valResult = ValidationResult{
+				IsRejected: true,
+				IsError:    false,
+				Data:       0,
+			}
+			alreadyGetCount = len(rejected)
+		} else {
+			valResult = ValidationResult{
+				IsRejected: false,
+				IsError:    false,
+				Data:       resultData[group],
+			}
+			alreadyGetCount = len(resultmap[resultData[group]])
+		}
+
+		half := s.Accounting.GetWorkersCount()/2 + 1
+		log2.Debug.Printf("half of workers is %d", half)
+		needhalf := half - alreadyGetCount
+		if needhalf < 0 {
+			needhalf = 0
+		}
+		if count > needhalf {
+			count = needhalf
+		}
+
+		return count, valResult
+
 	}
 
-	if need < 0 {
-		need = 0
-	}
+	/*
+		//TODO: 確率を計算する
+		resultmap := map[int32]int{}
+		rejects := 0
+		for _, res := range results {
+			if res.IsRejected {
+				rejects += 1
+				log2.Debug.Printf("calc is rejected %d", rejects)
+			} else if !res.IsError {
+				log2.Debug.Printf("result is %d", res.Data)
+				_, exist := resultmap[res.Data]
+				if exist {
+					resultmap[res.Data] += 1
+				} else {
+					resultmap[res.Data] = 1
+				}
+			}
+		}
+		log2.Debug.Printf("result is rejected from %d workers", rejects)
 
-	half := s.Accounting.GetWorkersCount()/2 + 1
-	log2.Debug.Printf("half of workers is %d", half)
-	needhalf := half - maxcount
-	if needhalf < 0 {
-		needhalf = 0
-	}
-	if need > needhalf {
-		need = needhalf
-	}
-	return need, conclusion
+		//TODO: 同率の場合の処理
+		maxcount := -1
+		resdata := int32(0)
+		for data, count := range resultmap {
+			if count > maxcount {
+				maxcount = count
+				resdata = data
+			}
+		}
+		log2.Debug.Printf("RESULT[%d] is selected from %d workers", resdata, maxcount)
 
+		var need int
+		conclusion := ValidationResult{}
+		if maxcount > rejects {
+			conclusion.IsRejected = false
+			conclusion.IsError = false
+			conclusion.Data = resdata
+			need = picknum - maxcount
+		} else {
+			conclusion.IsRejected = true
+			conclusion.IsError = false
+			conclusion.Data = 0
+			need = picknum - rejects
+		}
+
+		if need < 0 {
+			need = 0
+		}
+
+		half := s.Accounting.GetWorkersCount()/2 + 1
+		log2.Debug.Printf("half of workers is %d", half)
+		needhalf := half - maxcount
+		if needhalf < 0 {
+			needhalf = 0
+		}
+		if need > needhalf {
+			need = needhalf
+		}
+		return need, conclusion
+
+	}*/
 }
 
 //バリデーション結果に基づいて評価値を登録する
@@ -291,7 +360,7 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 	results := []ValidationResult{}
 	var conclusion *ValidationResult
 
-	errChan := make(chan error)                //エラー送信用チャネル
+	errChan := make(chan error)                //エラー送信用チャネルs
 	resultChan := make(chan *ValidationResult) //バリデーション結果送信チャネル
 
 	nextpick := picknum
@@ -301,6 +370,12 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 			log2.Debug.Printf("start to pick %d validators", nextpick)
 			//ワーカー取得
 			pickedWorkers, err := s.Accounting.SelectValidationWorkers(nextpick, unavailable)
+
+			if err == nil {
+				log2.Debug.Printf("Success to pick worker %d", len(pickedWorkers))
+			} else {
+				log2.Err.Printf("Failed to pick worker %#v", err)
+			}
 
 			if err == nil {
 				nextpick = 0
@@ -325,7 +400,10 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 					}
 				}
 			} else {
-				errChan <- err
+				log2.Debug.Printf("sending error to errchannel")
+				go func() {
+					errChan <- err
+				}()
 			}
 		}
 
@@ -354,12 +432,15 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 				if nextpick < 0 {
 					nextpick = 0
 				}
+			} else if needworker < 0 {
+				return results, nil, ErrFailedToCalcNeedWorker
 			} else {
 				return results, conclusion, nil
 			}
 		case <-ctx.Done():
 			return results, nil, ctx.Err()
 		case err := <-errChan:
+			log2.Debug.Printf("Catch error and ending validation")
 			return results, nil, err
 		default:
 		}

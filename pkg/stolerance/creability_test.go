@@ -105,10 +105,14 @@ func TestNeedWorkerCount(t *testing.T) {
 	avgcred := 0.7
 	threshold := 0.9999999999999999
 
-	count := CalcNeedWorkerCount(avgcred, groups, threshold)
+	count, group := CalcNeedWorkerCountAndBestGroup(avgcred, groups, threshold)
 
-	if count != 0 {
-		t.Fatalf("want count=%d, but %d", 0, count)
+	if count != 42 {
+		t.Fatalf("want count=%d, but %d", 42, count)
+	}
+
+	if group != 1 {
+		t.Fatalf("want best group=%d, but %d", 1, group)
 	}
 
 }

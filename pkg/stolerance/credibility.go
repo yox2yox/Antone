@@ -36,15 +36,15 @@ func CalcRGroupCred(targetidx int, groups [][]float64) float64 {
 	return cred
 }
 
-func CalcNeedWorkerCount(avgcred float64, groups [][]float64, threshold float64) int {
+func CalcNeedWorkerCountAndBestGroup(avgcred float64, groups [][]float64, threshold float64) (int, int) {
 
 	if threshold <= 0 || threshold >= 1 {
 		log2.Err.Printf("threshold is not propbability.(%.30f)", threshold)
-		return -1
+		return -1, -1
 	}
 	if avgcred <= 0 || avgcred >= 1 {
 		log2.Err.Printf("average credibility is not propbability.(%.30f)", avgcred)
-		return -1
+		return -1, -1
 	}
 
 	maxgroup := 0
@@ -68,7 +68,7 @@ func CalcNeedWorkerCount(avgcred float64, groups [][]float64, threshold float64)
 	}
 
 	log2.Debug.Printf("complete to calc need worker count [%d]", needcount)
-	return needcount
+	return needcount, maxgroup
 
 }
 

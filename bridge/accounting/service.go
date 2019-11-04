@@ -24,11 +24,12 @@ type Worker struct {
 
 type Service struct {
 	sync.RWMutex
-	Workers            map[string]*Worker
-	Clients            map[string]*Client
-	WorkersId          []string
-	AverageCredibility float64
-	FaultyFraction     float64
+	Workers               map[string]*Worker
+	Clients               map[string]*Client
+	WorkersId             []string
+	AverageCredibility    float64
+	FaultyFraction        float64
+	CredibilityThreshould float64
 	//Holders                     map[string][]string
 	WithoutConnectRemoteForTest bool
 }
@@ -46,11 +47,12 @@ var (
 
 func NewService(withoutConnectRemoteForTest bool) *Service {
 	return &Service{
-		Workers:            map[string]*Worker{},
-		Clients:            map[string]*Client{},
-		WorkersId:          []string{},
-		AverageCredibility: 0.7,
-		FaultyFraction:     0.4,
+		Workers:               map[string]*Worker{},
+		Clients:               map[string]*Client{},
+		WorkersId:             []string{},
+		AverageCredibility:    0.7,
+		FaultyFraction:        0.4,
+		CredibilityThreshould: 0.6,
 		//Holders:                     map[string][]string{},
 		WithoutConnectRemoteForTest: withoutConnectRemoteForTest,
 	}
