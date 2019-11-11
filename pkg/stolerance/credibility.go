@@ -8,9 +8,9 @@ var e = 2.718281828459045
 
 func CalcWorkerCred(f float64, reputation int) float64 {
 	if reputation > 0 {
-		return 1 - (f/(1-f))*(1/(float64(reputation)*e))
+		return 1.0 - (f/(1-f))*(1/(float64(reputation)*e))
 	} else {
-		return 1 - f
+		return 1.0 - f
 	}
 }
 
@@ -49,7 +49,7 @@ func CalcNeedWorkerCountAndBestGroup(avgcred float64, groups [][]float64, thresh
 
 	maxgroup := 0
 	maxcred := 0.0
-	log2.Debug.Print("start to calc groups' credibility")
+	log2.Debug.Printf("start to calc groups' credibility%#v", groups)
 	for index, _ := range groups {
 		cred := CalcRGroupCred(index, groups)
 		if cred > maxcred {
@@ -57,6 +57,8 @@ func CalcNeedWorkerCountAndBestGroup(avgcred float64, groups [][]float64, thresh
 			maxgroup = index
 		}
 	}
+
+	log2.Debug.Printf("max credibility is %f", maxcred)
 
 	estimate := maxcred
 	needcount := 0
@@ -93,6 +95,9 @@ func sigma(target []float64, preverse bool, except []int) float64 {
 }
 
 func lambda(target []float64, preverse bool, except []int) float64 {
+	if len(target) == 0 {
+		return 0
+	}
 	result := 1.0
 	for index, x := range target {
 		isExcepted := false

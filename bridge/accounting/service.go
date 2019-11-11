@@ -52,7 +52,7 @@ func NewService(withoutConnectRemoteForTest bool) *Service {
 		WorkersId:             []string{},
 		AverageCredibility:    0.7,
 		FaultyFraction:        0.4,
-		CredibilityThreshould: 0.6,
+		CredibilityThreshould: 0.9,
 		//Holders:                     map[string][]string{},
 		WithoutConnectRemoteForTest: withoutConnectRemoteForTest,
 	}
@@ -233,7 +233,7 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool) (int, error)
 		s.calcAverageCredibility()
 	} else {
 		s.Lock()
-		s.Workers[workerId].Reputation -= 1
+		s.Workers[workerId].Reputation = 0
 		rep = s.Workers[workerId].Reputation
 		s.Workers[workerId].Credibility = stolerance.CalcWorkerCred(s.FaultyFraction, rep)
 		s.Unlock()

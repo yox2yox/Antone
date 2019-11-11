@@ -196,13 +196,13 @@ func (s *Service) removeWaitingList(userId string) {
 //結果リストから、必要な追加ワーカ数および最も多数だった結果を返す
 func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []ValidationResult) (int, ValidationResult) {
 
-	log2.Debug.Printf("start to calculate conclusion")
+	log2.Debug.Printf("start to calculate conclusion%#v", results)
 
 	resultmap := map[int32][]float64{}
 	rejected := []float64{}
 	for _, res := range results {
 		worker, err := s.Accounting.GetWorker(res.WorkerId)
-		if err != nil {
+		if err == nil {
 			if res.IsRejected {
 				rejected = append(rejected, worker.Credibility)
 				log2.Debug.Printf("calc is rejected by %s", worker.Id)
@@ -212,9 +212,13 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []Valid
 				if exist {
 					resultmap[res.Data] = append(resultmap[res.Data], worker.Credibility)
 				} else {
-					resultmap[res.Data] = []float64{}
+					resultmap[res.Data] = []float64{worker.Credibility}
 				}
+			} else {
+				log2.Debug.Printf("result is error")
 			}
+		} else {
+			log2.Debug.Printf("failed to get worker account %s %#v", res.WorkerId, err)
 		}
 	}
 
@@ -224,7 +228,9 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []Valid
 		credsGroups = append(credsGroups, res)
 		resultData = append(resultData, data)
 	}
-	credsGroups = append(credsGroups, rejected)
+	if len(rejected) > 0 {
+		credsGroups = append(credsGroups, rejected)
+	}
 
 	count, group := stolerance.CalcNeedWorkerCountAndBestGroup(s.Accounting.AverageCredibility, credsGroups, s.Accounting.CredibilityThreshould)
 
