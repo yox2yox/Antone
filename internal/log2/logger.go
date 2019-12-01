@@ -28,9 +28,9 @@ func init() {
 	}
 	testErrRatefile, err = os.OpenFile("log/testER.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		TestER = log.New(os.Stderr, "[ERROR]", log.LstdFlags)
+		TestER = log.New(os.Stderr, "[TEST]", log.LstdFlags)
 	} else {
-		TestER = log.New(testErrRatefile, "[ERROR]", log.LstdFlags)
+		TestER = log.New(testErrRatefile, "[TEST]", log.LstdFlags)
 	}
 
 }

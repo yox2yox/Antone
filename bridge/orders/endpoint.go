@@ -50,6 +50,10 @@ func (e *Endpoint) RequestValidatableCode(ctx context.Context, vCodeRequest *pb.
 
 	e.Orders.AddValidationRequest(vCodeRequest.Datapoolid, e.Config.NeedValidationNum, holderId, vcode)
 	log2.Debug.Printf("success to get validatable code %#v", vcode)
+
+	//Wait For Validation
+	for e.Orders.getWaitingValidationRequestsCount() > 0 {
+	}
 	return vcode, nil
 
 }

@@ -18,6 +18,7 @@ message ValidatableCodeRequest {
 message ValidatableCode {
   int32 data = 1; //データベースの元データ
   int32 add = 2; //加算する値
+  int32 reputation = 3;//検証用にワーカーの評価値を送信
 }
 
 message ValidationResult {

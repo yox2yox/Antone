@@ -1,7 +1,9 @@
 package accounting
 
 import (
+	crand "crypto/rand"
 	"errors"
+	"math/big"
 	"math/rand"
 	"sync"
 	"time"
@@ -15,11 +17,12 @@ type Client struct {
 }
 
 type Worker struct {
-	Addr        string
-	Id          string
-	Reputation  int
-	Credibility float64
-	Holdinds    []string
+	Addr          string
+	Id            string
+	Reputation    int
+	GoodWorkCount int
+	Credibility   float64
+	Holdinds      []string
 }
 
 type Service struct {
@@ -30,6 +33,7 @@ type Service struct {
 	AverageCredibility    float64
 	FaultyFraction        float64
 	CredibilityThreshould float64
+	ReputationResetRate   float64
 	//Holders                     map[string][]string
 	WithoutConnectRemoteForTest bool
 }
@@ -45,14 +49,15 @@ var (
 	ErrFailedToComplete          = errors.New("Failed to complete work")
 )
 
-func NewService(withoutConnectRemoteForTest bool) *Service {
+func NewService(withoutConnectRemoteForTest bool, faultyFraction float64, credibilityThreshould float64, reputationResetRate float64) *Service {
 	return &Service{
 		Workers:               map[string]*Worker{},
 		Clients:               map[string]*Client{},
 		WorkersId:             []string{},
 		AverageCredibility:    0.7,
-		FaultyFraction:        0.4,
-		CredibilityThreshould: 0.9,
+		FaultyFraction:        faultyFraction,
+		CredibilityThreshould: credibilityThreshould,
+		ReputationResetRate:   reputationResetRate,
 		//Holders:                     map[string][]string{},
 		WithoutConnectRemoteForTest: withoutConnectRemoteForTest,
 	}
@@ -131,11 +136,12 @@ func (s *Service) CreateNewWorker(workerId string, Addr string) (*Worker, error)
 	}
 	cred := stolerance.CalcWorkerCred(s.FaultyFraction, 0)
 	worker := &Worker{
-		Addr:        Addr,
-		Id:          workerId,
-		Reputation:  0,
-		Credibility: cred,
-		Holdinds:    []string{},
+		Addr:          Addr,
+		Id:            workerId,
+		Reputation:    0,
+		GoodWorkCount: 0,
+		Credibility:   cred,
+		Holdinds:      []string{},
 	}
 	s.Lock()
 	s.Workers[workerId] = worker
@@ -227,13 +233,30 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool) (int, error)
 	if confirmed {
 		s.Lock()
 		s.Workers[workerId].Reputation += 1
+		s.Workers[workerId].GoodWorkCount += 1
 		rep = s.Workers[workerId].Reputation
-		s.Workers[workerId].Credibility = stolerance.CalcWorkerCred(s.FaultyFraction, rep)
+		n, err := crand.Int(crand.Reader, big.NewInt(100))
+		if err != nil {
+			log2.Err.Printf("failed to get random number")
+		} else if n.Cmp(big.NewInt(int64(s.ReputationResetRate*100))) >= 1 {
+			s.Workers[workerId].Credibility = stolerance.CalcWorkerCred(s.FaultyFraction, rep)
+		} else {
+			reset, err := crand.Int(crand.Reader, big.NewInt(100))
+			if err != nil {
+				log2.Err.Printf("failed to get random number")
+				s.Workers[workerId].Reputation = 0
+			} else {
+				s.Workers[workerId].Reputation = int(float64(s.Workers[workerId].Reputation) * (float64(reset.Int64()) / 100))
+			}
+			rep = s.Workers[workerId].Reputation
+			s.Workers[workerId].Credibility = stolerance.CalcWorkerCred(s.FaultyFraction, rep)
+		}
 		s.Unlock()
 		s.calcAverageCredibility()
 	} else {
 		s.Lock()
 		s.Workers[workerId].Reputation = 0
+		s.Workers[workerId].GoodWorkCount = 0
 		rep = s.Workers[workerId].Reputation
 		s.Workers[workerId].Credibility = stolerance.CalcWorkerCred(s.FaultyFraction, rep)
 		s.Unlock()

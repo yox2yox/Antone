@@ -48,6 +48,9 @@ type Service struct {
 	FailedCount                 int
 	SuccessCount                int
 	RejectedCount               int
+	WorksCount                  int
+	NodesAvg                    float64
+	NodesSum                    int
 	stopChan                    chan struct{}
 }
 
@@ -77,6 +80,10 @@ func (s *Service) IsTheDatapoolAvailable(datapoolId string) bool {
 	}
 	s.RUnlock()
 	return available
+}
+
+func (s *Service) getWaitingValidationRequestsCount() int {
+	return len(s.ValidationRequests)
 }
 
 func (s *Service) getValidatableCodeRemote(holder accounting.Worker, datapoolId string, add int32) (*pb.ValidatableCode, error) {
@@ -140,7 +147,7 @@ func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.Valida
 	workerClient := workerpb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add}
+	vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add, Reputation: int32(worker.Reputation)}
 	validationResult, err := workerClient.OrderValidation(ctx, vCodeWorker)
 	if err != nil {
 		log2.Err.Printf("failed to validation on remote %#v", err)
@@ -492,11 +499,14 @@ func (s *Service) Run() {
 
 						//CalcERモードの時、結果をログに出力
 						if s.CalcER {
+							s.WorksCount += 1
 							if results == nil || conclusion == nil {
 								s.Lock()
 								s.ErrCount += 1
 								s.Unlock()
 							} else {
+								s.NodesSum += len(results)
+								s.NodesAvg = float64(s.NodesSum) / float64(s.WorksCount)
 								if conclusion.IsRejected {
 									s.RejectedCount += 1
 								} else if conclusion.IsError {
@@ -510,7 +520,7 @@ func (s *Service) Run() {
 									}
 								}
 							}
-							log2.TestER.Printf("Validation Complete SUC[%d] FAIL[%d] ERR[%d] REJ[%d]", s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount)
+							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%f]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, s.NodesAvg)
 						}
 						//結果から評価値を登録
 						if results != nil {

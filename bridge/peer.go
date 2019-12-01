@@ -26,7 +26,7 @@ type Peer struct {
 	Orders     *orders.Service
 }
 
-func New(config *config.BridgeConfig, debug bool) (*Peer, error) {
+func New(config *config.BridgeConfig, debug bool, faultyFraction float64, credibilityThreshold float64, reputationResetRate float64) (*Peer, error) {
 
 	peer := &Peer{}
 
@@ -45,7 +45,7 @@ func New(config *config.BridgeConfig, debug bool) (*Peer, error) {
 	}
 
 	{ //setup Accounting
-		peer.Accounting = accounting.NewService(debug)
+		peer.Accounting = accounting.NewService(debug, faultyFraction, credibilityThreshold, reputationResetRate)
 		pb.RegisterAccountingServer(peer.GrpcServer, accounting.NewEndpoint(peer.Accounting))
 	}
 

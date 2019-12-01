@@ -3,15 +3,17 @@ package worker
 import (
 	"context"
 	"errors"
+	"yox2yox/antone/pkg/stolerance"
 	"yox2yox/antone/worker/datapool"
 	pb "yox2yox/antone/worker/pb"
 )
 
 type Endpoint struct {
-	Datapool *datapool.Service
-	Db       map[string]int32
-	Id       string
-	BadMode  bool
+	Datapool   *datapool.Service
+	Db         map[string]int32
+	Id         string
+	BadMode    bool
+	Reputation int
 }
 
 func NewEndpoint(datapool *datapool.Service, badmode bool) *Endpoint {
@@ -20,7 +22,8 @@ func NewEndpoint(datapool *datapool.Service, badmode bool) *Endpoint {
 		Db: map[string]int32{
 			"client0": 0,
 		},
-		BadMode: badmode,
+		BadMode:    badmode,
+		Reputation: 0,
 	}
 }
 
@@ -41,9 +44,10 @@ func (e *Endpoint) GetValidatableCode(ctx context.Context, vCodeRequest *pb.Vali
 }
 
 func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.ValidatableCode) (*pb.ValidationResult, error) {
-	if e.BadMode {
+	if e.BadMode && stolerance.CalcWorkerCred(0.4, int(validatableCode.Reputation)) >= 0.9 {
 		return &pb.ValidationResult{Pool: -1, Reject: false}, nil
 	}
 	pool := validatableCode.Data + validatableCode.Add
+	e.Reputation += 1
 	return &pb.ValidationResult{Pool: pool, Reject: false}, nil
 }
