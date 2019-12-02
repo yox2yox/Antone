@@ -138,7 +138,7 @@ func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add
 	}
 }
 
-func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.ValidatableCode) *ValidationResult {
+func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.ValidatableCode, badreputations []int32) *ValidationResult {
 	conn, err := grpc.Dial(worker.Addr, grpc.WithInsecure())
 	if err != nil {
 		log2.Err.Printf("failed to connect to remote %#v", err)
@@ -147,7 +147,7 @@ func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.Valida
 	workerClient := workerpb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add, Reputation: int32(worker.Reputation)}
+	vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add, Reputation: int32(worker.Reputation), Badreputations: badreputations, Threshould: float32(s.Accounting.CredibilityThreshould), Resetrate: float32(s.Accounting.ReputationResetRate)}
 	validationResult, err := workerClient.OrderValidation(ctx, vCodeWorker)
 	if err != nil {
 		log2.Err.Printf("failed to validation on remote %#v", err)
@@ -393,8 +393,13 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 			if err == nil {
 				nextpick = 0
 				pickedIDs := []string{}
+				badreputations := []int32{}
 				for _, worker := range pickedWorkers {
 					pickedIDs = append(pickedIDs, worker.Id)
+					if worker.IsBad {
+						log2.Debug.Printf("bad woker detected")
+						badreputations = append(badreputations, int32(worker.GoodWorkCount))
+					}
 				}
 				unavailable = append(unavailable, pickedIDs...)
 				waitlist = append(waitlist, pickedIDs...)
@@ -403,7 +408,7 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 				for _, worker := range pickedWorkers {
 					if s.WithoutConnectRemoteForTest == false {
 						go func(target *accounting.Worker) {
-							validationResult := s.validateCodeRemote(target, vCode)
+							validationResult := s.validateCodeRemote(target, vCode, badreputations)
 							resultChan <- validationResult
 						}(worker)
 					} else {
@@ -520,7 +525,7 @@ func (s *Service) Run() {
 									}
 								}
 							}
-							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%f]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, s.NodesAvg)
+							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%f] LOSS_B[%d] LOSS_G[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss)
 						}
 						//結果から評価値を登録
 						if results != nil {

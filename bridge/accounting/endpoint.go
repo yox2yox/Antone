@@ -17,7 +17,13 @@ func NewEndpoint(accounting *Service) *Endpoint {
 
 //Workerアカウント作成
 func (e *Endpoint) SignupWorker(ctx context.Context, req *pb.SignupWorkerRequest) (*pb.WorkerAccount, error) {
-	worker, err := e.accounting.CreateNewWorker(req.Id, req.Addr)
+	var worker *Worker
+	var err error
+	if req.IsBad {
+		worker, err = e.accounting.CreateNewBadWorker(req.Id, req.Addr)
+	} else {
+		worker, err = e.accounting.CreateNewWorker(req.Id, req.Addr)
+	}
 	if err != nil {
 		return nil, err
 	}

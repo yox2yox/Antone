@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"errors"
+	"yox2yox/antone/internal/log2"
 	"yox2yox/antone/pkg/stolerance"
 	"yox2yox/antone/worker/datapool"
 	pb "yox2yox/antone/worker/pb"
@@ -44,7 +45,18 @@ func (e *Endpoint) GetValidatableCode(ctx context.Context, vCodeRequest *pb.Vali
 }
 
 func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.ValidatableCode) (*pb.ValidationResult, error) {
-	if e.BadMode && stolerance.CalcWorkerCred(0.4, int(validatableCode.Reputation)) >= 0.9 {
+	log2.Debug.Printf("got bad reputations %#v", validatableCode.Badreputations)
+
+	creds := []float64{}
+	for _, rep := range validatableCode.Badreputations {
+		wcred := stolerance.CalcWorkerCred(0.4, int(rep))
+		creds = append(creds, wcred)
+	}
+	results := [][]float64{creds}
+	log2.Debug.Printf("got bad results %#v", results)
+	gcred := stolerance.CalcRGroupCred(0, results)
+	log2.Debug.Printf("group cred for bad workers is %f", gcred)
+	if e.BadMode && gcred >= 0.9 {
 		return &pb.ValidationResult{Pool: -1, Reject: false}, nil
 	}
 	pool := validatableCode.Data + validatableCode.Add

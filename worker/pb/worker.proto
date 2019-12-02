@@ -19,6 +19,9 @@ message ValidatableCode {
   int32 data = 1; //データベースの元データ
   int32 add = 2; //加算する値
   int32 reputation = 3;//検証用にワーカーの評価値を送信
+  float threshould = 4;
+  float resetrate = 5;
+  repeated int32 badreputations = 6; //不正ノードの予想評価値
 }
 
 message ValidationResult {

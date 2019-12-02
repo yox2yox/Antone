@@ -21,6 +21,8 @@ type Worker struct {
 	Id            string
 	Reputation    int
 	GoodWorkCount int
+	Balance       int
+	IsBad         bool
 	Credibility   float64
 	Holdinds      []string
 }
@@ -36,6 +38,9 @@ type Service struct {
 	ReputationResetRate   float64
 	//Holders                     map[string][]string
 	WithoutConnectRemoteForTest bool
+	BadWorkersLoss              int
+	GoodWorkersLoss             int
+	MaxStake                    int
 }
 
 var (
@@ -58,6 +63,9 @@ func NewService(withoutConnectRemoteForTest bool, faultyFraction float64, credib
 		FaultyFraction:        faultyFraction,
 		CredibilityThreshould: credibilityThreshould,
 		ReputationResetRate:   reputationResetRate,
+		BadWorkersLoss:        0,
+		GoodWorkersLoss:       0,
+		MaxStake:              10000,
 		//Holders:                     map[string][]string{},
 		WithoutConnectRemoteForTest: withoutConnectRemoteForTest,
 	}
@@ -122,6 +130,16 @@ func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worke
 	return picked, nil
 }
 
+func (s *Service) CreateNewBadWorker(workerId string, Addr string) (*Worker, error) {
+	worker, err := s.CreateNewWorker(workerId, Addr)
+	if err != nil {
+		return nil, err
+	} else {
+		worker.IsBad = true
+		return worker, nil
+	}
+}
+
 //Workerアカウントを新規作成
 func (s *Service) CreateNewWorker(workerId string, Addr string) (*Worker, error) {
 
@@ -140,6 +158,8 @@ func (s *Service) CreateNewWorker(workerId string, Addr string) (*Worker, error)
 		Id:            workerId,
 		Reputation:    0,
 		GoodWorkCount: 0,
+		Balance:       s.MaxStake,
+		IsBad:         false,
 		Credibility:   cred,
 		Holdinds:      []string{},
 	}
@@ -224,7 +244,7 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool) (int, error)
 
 	log2.Debug.Printf("start updating the reputation of WORKER[%s]", workerId)
 
-	_, exist := s.Workers[workerId]
+	worker, exist := s.Workers[workerId]
 	if !exist {
 		log2.Debug.Printf("failed to update the reputation of WORKER[%s] %s", workerId, ErrIDNotExist)
 		return 0, ErrIDNotExist
@@ -233,12 +253,17 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool) (int, error)
 	if confirmed {
 		s.Lock()
 		s.Workers[workerId].Reputation += 1
+		s.Workers[workerId].Balance += 1
 		s.Workers[workerId].GoodWorkCount += 1
+		stakeRate := float64(worker.Balance) / float64(s.MaxStake)
+		if stakeRate > 1 {
+			stakeRate = 1
+		}
 		rep = s.Workers[workerId].Reputation
 		n, err := crand.Int(crand.Reader, big.NewInt(100))
 		if err != nil {
 			log2.Err.Printf("failed to get random number")
-		} else if n.Cmp(big.NewInt(int64(s.ReputationResetRate*100))) >= 1 {
+		} else if n.Cmp(big.NewInt(int64((1-s.ReputationResetRate)*stakeRate*100))) <= -1 {
 			s.Workers[workerId].Credibility = stolerance.CalcWorkerCred(s.FaultyFraction, rep)
 		} else {
 			reset, err := crand.Int(crand.Reader, big.NewInt(100))
@@ -256,6 +281,12 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool) (int, error)
 	} else {
 		s.Lock()
 		s.Workers[workerId].Reputation = 0
+		s.Workers[workerId].Balance = int(s.Workers[workerId].Balance / 2)
+		if s.Workers[workerId].IsBad {
+			s.BadWorkersLoss += s.Workers[workerId].Balance
+		} else {
+			s.GoodWorkersLoss += s.Workers[workerId].Balance
+		}
 		s.Workers[workerId].GoodWorkCount = 0
 		rep = s.Workers[workerId].Reputation
 		s.Workers[workerId].Credibility = stolerance.CalcWorkerCred(s.FaultyFraction, rep)

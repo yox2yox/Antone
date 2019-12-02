@@ -25,6 +25,7 @@ type Peer struct {
 	GrpcServer                  *grpc.Server
 	DataPool                    *datapool.Service
 	WithoutConnectRemoteForTest bool
+	BadMode                     bool
 }
 
 func New(config *config.WorkerConfig, debug bool, badmode bool) (*Peer, error) {
@@ -32,6 +33,7 @@ func New(config *config.WorkerConfig, debug bool, badmode bool) (*Peer, error) {
 
 	{ //setup debug mode
 		peer.WithoutConnectRemoteForTest = debug
+		peer.BadMode = badmode
 	}
 
 	{ //setup config
@@ -79,7 +81,7 @@ func (p *Peer) Run(ctx context.Context) error {
 				return err
 			}
 			accountid := fmt.Sprint(n.Int64())
-			reqSignup := &bpb.SignupWorkerRequest{Id: accountid, Addr: p.WorkerConfig.Server.Addr}
+			reqSignup := &bpb.SignupWorkerRequest{Id: accountid, Addr: p.WorkerConfig.Server.Addr, IsBad: p.BadMode}
 			_, err = clientAccount.SignupWorker(ctxAccount, reqSignup)
 			if err != nil {
 				log2.Err.Printf("failed to signup worker\n%#v\n\tworker/peer.go", err)
