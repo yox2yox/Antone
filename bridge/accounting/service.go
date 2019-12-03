@@ -41,6 +41,7 @@ type Service struct {
 	BadWorkersLoss              int
 	GoodWorkersLoss             int
 	MaxStake                    int
+	MinStake                    int
 }
 
 var (
@@ -55,6 +56,7 @@ var (
 )
 
 func NewService(withoutConnectRemoteForTest bool, faultyFraction float64, credibilityThreshould float64, reputationResetRate float64) *Service {
+	log2.Debug.Printf("Credibility Threshould is %f", credibilityThreshould)
 	return &Service{
 		Workers:               map[string]*Worker{},
 		Clients:               map[string]*Client{},
@@ -66,6 +68,7 @@ func NewService(withoutConnectRemoteForTest bool, faultyFraction float64, credib
 		BadWorkersLoss:        0,
 		GoodWorkersLoss:       0,
 		MaxStake:              10000,
+		MinStake:              100,
 		//Holders:                     map[string][]string{},
 		WithoutConnectRemoteForTest: withoutConnectRemoteForTest,
 	}
@@ -109,6 +112,12 @@ func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worke
 		s.RUnlock()
 		log2.Debug.Printf("worker:%s is picked", pickedId)
 		contain := false
+		worker, err := s.GetWorker(pickedId)
+		if err != nil {
+			contain = true
+		} else if worker.Balance < s.MinStake {
+			contain = true
+		}
 		for _, id := range picked {
 			if id.Id == pickedId {
 				contain = true
@@ -240,7 +249,7 @@ func (s *Service) CreateNewClient(userId string) (*Client, error) {
 }
 
 //評価値を更新
-func (s *Service) UpdateReputation(workerId string, confirmed bool) (int, error) {
+func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBridge bool) (int, error) {
 
 	log2.Debug.Printf("start updating the reputation of WORKER[%s]", workerId)
 
@@ -251,10 +260,13 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool) (int, error)
 	}
 	rep := 0
 	if confirmed {
+		//バリデーション成功時の処理
+
 		s.Lock()
 		s.Workers[workerId].Reputation += 1
 		s.Workers[workerId].Balance += 1
 		s.Workers[workerId].GoodWorkCount += 1
+
 		stakeRate := float64(worker.Balance) / float64(s.MaxStake)
 		if stakeRate > 1 {
 			stakeRate = 1
@@ -279,13 +291,20 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool) (int, error)
 		s.Unlock()
 		s.calcAverageCredibility()
 	} else {
+		//バリデーション失敗時の処理
 		s.Lock()
 		s.Workers[workerId].Reputation = 0
-		s.Workers[workerId].Balance = int(s.Workers[workerId].Balance / 2)
-		if s.Workers[workerId].IsBad {
-			s.BadWorkersLoss += s.Workers[workerId].Balance
+		balanceBefore := s.Workers[workerId].Balance
+		if validateByBridge {
+			s.Workers[workerId].Balance = 0
 		} else {
-			s.GoodWorkersLoss += s.Workers[workerId].Balance
+			s.Workers[workerId].Balance = int(s.Workers[workerId].Balance / 2)
+		}
+		balanceAfter := s.Workers[workerId].Balance
+		if s.Workers[workerId].IsBad {
+			s.BadWorkersLoss += balanceBefore - balanceAfter
+		} else {
+			s.GoodWorkersLoss += balanceBefore - balanceAfter
 		}
 		s.Workers[workerId].GoodWorkCount = 0
 		rep = s.Workers[workerId].Reputation

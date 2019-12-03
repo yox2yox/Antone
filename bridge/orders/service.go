@@ -49,6 +49,7 @@ type Service struct {
 	SuccessCount                int
 	RejectedCount               int
 	WorksCount                  int
+	OnBridgeCount               int
 	NodesAvg                    float64
 	NodesSum                    int
 	stopChan                    chan struct{}
@@ -66,6 +67,7 @@ func NewService(accounting *accounting.Service, datapool *datapool.Service, with
 		SuccessCount:                0,
 		FailedCount:                 0,
 		RejectedCount:               0,
+		OnBridgeCount:               0,
 		stopChan:                    make(chan struct{}),
 	}
 }
@@ -238,9 +240,15 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []Valid
 	if len(rejected) > 0 {
 		credsGroups = append(credsGroups, rejected)
 	}
+	var count int
+	var group int
 
-	count, group := stolerance.CalcNeedWorkerCountAndBestGroup(s.Accounting.AverageCredibility, credsGroups, s.Accounting.CredibilityThreshould)
-
+	if len(resultData) >= 2 {
+		count = 0
+		group = 0
+	} else {
+		count, group = stolerance.CalcNeedWorkerCountAndBestGroup(s.Accounting.AverageCredibility, credsGroups, s.Accounting.CredibilityThreshould)
+	}
 	if count < 0 || group < 0 {
 		return -1, ValidationResult{}
 	} else {
@@ -340,12 +348,12 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []Valid
 }
 
 //バリデーション結果に基づいて評価値を登録する
-func (s *Service) commitReputation(holderId string, results []ValidationResult, conclusion *ValidationResult) {
+func (s *Service) commitReputation(holderId string, results []ValidationResult, conclusion *ValidationResult, validateByBridge bool) {
 	if conclusion != nil {
 		if conclusion.IsRejected == true {
-			s.Accounting.UpdateReputation(holderId, false)
+			s.Accounting.UpdateReputation(holderId, false, validateByBridge)
 		} else {
-			s.Accounting.UpdateReputation(holderId, true)
+			s.Accounting.UpdateReputation(holderId, true, validateByBridge)
 		}
 	}
 	for _, res := range results {
@@ -361,7 +369,7 @@ func (s *Service) commitReputation(holderId string, results []ValidationResult, 
 				confirmed = true
 			}
 		}
-		s.Accounting.UpdateReputation(res.WorkerId, confirmed)
+		s.Accounting.UpdateReputation(res.WorkerId, confirmed, validateByBridge)
 	}
 }
 
@@ -465,6 +473,25 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 	}
 }
 
+func (s *Service) DoesValidationNeed(results []ValidationResult, conc ValidationResult) bool {
+
+	for _, res := range results {
+		if res.Data != conc.Data {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Service) ValidateOnBridge(vcode pb.ValidatableCode) *ValidationResult {
+	result := vcode.Data + vcode.Add
+	return &ValidationResult{
+		Data:       result,
+		IsRejected: false,
+		IsError:    false,
+	}
+}
+
 func (s *Service) Run() {
 	for {
 		select {
@@ -500,6 +527,22 @@ func (s *Service) Run() {
 
 						if err != nil {
 							log2.Err.Printf("failed to validation %#v", err)
+						} else if results != nil {
+							validateByBridge := false
+							if s.DoesValidationNeed(results, *conclusion) {
+								conclusion = s.ValidateOnBridge(*vreq.ValidatableCode)
+								s.OnBridgeCount++
+								validateByBridge = true
+							} else {
+								/*conclusion = s.ValidateOnBridge(*vreq.ValidatableCode)
+								if s.DoesValidationNeed(results, *conclusion) {
+									s.OnBridgeCount++
+									validateByBridge = true
+								}*/
+							}
+							//結果から評価値を登録
+							fmt.Printf("INFO %s [] END - Validations by remote workers", time.Now())
+							s.commitReputation(vreq.HolderId, results, conclusion, validateByBridge)
 						}
 
 						//CalcERモードの時、結果をログに出力
@@ -525,12 +568,7 @@ func (s *Service) Run() {
 									}
 								}
 							}
-							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%f] LOSS_B[%d] LOSS_G[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss)
-						}
-						//結果から評価値を登録
-						if results != nil {
-							fmt.Printf("INFO %s [] END - Validations by remote workers", time.Now())
-							s.commitReputation(vreq.HolderId, results, conclusion)
+							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%f] LOSS_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss, s.OnBridgeCount)
 						}
 						//結果を送信
 						if conclusion != nil && conclusion.IsRejected == false {
