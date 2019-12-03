@@ -168,7 +168,11 @@ func (s *Service) dequeueValidationRequest() *ValidationRequest {
 	}
 	s.Lock()
 	tmp := s.ValidationRequests[0]
-	s.ValidationRequests = s.ValidationRequests[1:]
+	if len(s.ValidationRequests) > 1 {
+		s.ValidationRequests = s.ValidationRequests[1:]
+	} else {
+		s.ValidationRequests = []*ValidationRequest{}
+	}
 	s.Unlock()
 	return tmp
 }
@@ -284,67 +288,6 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []Valid
 
 	}
 
-	/*
-		//TODO: 確率を計算する
-		resultmap := map[int32]int{}
-		rejects := 0
-		for _, res := range results {
-			if res.IsRejected {
-				rejects += 1
-				log2.Debug.Printf("calc is rejected %d", rejects)
-			} else if !res.IsError {
-				log2.Debug.Printf("result is %d", res.Data)
-				_, exist := resultmap[res.Data]
-				if exist {
-					resultmap[res.Data] += 1
-				} else {
-					resultmap[res.Data] = 1
-				}
-			}
-		}
-		log2.Debug.Printf("result is rejected from %d workers", rejects)
-
-		//TODO: 同率の場合の処理
-		maxcount := -1
-		resdata := int32(0)
-		for data, count := range resultmap {
-			if count > maxcount {
-				maxcount = count
-				resdata = data
-			}
-		}
-		log2.Debug.Printf("RESULT[%d] is selected from %d workers", resdata, maxcount)
-
-		var need int
-		conclusion := ValidationResult{}
-		if maxcount > rejects {
-			conclusion.IsRejected = false
-			conclusion.IsError = false
-			conclusion.Data = resdata
-			need = picknum - maxcount
-		} else {
-			conclusion.IsRejected = true
-			conclusion.IsError = false
-			conclusion.Data = 0
-			need = picknum - rejects
-		}
-
-		if need < 0 {
-			need = 0
-		}
-
-		half := s.Accounting.GetWorkersCount()/2 + 1
-		log2.Debug.Printf("half of workers is %d", half)
-		needhalf := half - maxcount
-		if needhalf < 0 {
-			needhalf = 0
-		}
-		if need > needhalf {
-			need = needhalf
-		}
-		return need, conclusion
-
-	}*/
 }
 
 //バリデーション結果に基づいて評価値を登録する
