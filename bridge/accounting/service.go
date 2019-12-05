@@ -42,6 +42,8 @@ type Service struct {
 	GoodWorkersLoss             int
 	MaxStake                    int
 	MinStake                    int
+	StakeLeft                   int
+	BlackListing                bool
 }
 
 var (
@@ -55,7 +57,7 @@ var (
 	ErrFailedToComplete          = errors.New("Failed to complete work")
 )
 
-func NewService(withoutConnectRemoteForTest bool, faultyFraction float64, credibilityThreshould float64, reputationResetRate float64) *Service {
+func NewService(withoutConnectRemoteForTest bool, faultyFraction float64, credibilityThreshould float64, reputationResetRate float64, blackListing bool) *Service {
 	log2.Debug.Printf("Credibility Threshould is %f", credibilityThreshould)
 	return &Service{
 		Workers:               map[string]*Worker{},
@@ -69,6 +71,8 @@ func NewService(withoutConnectRemoteForTest bool, faultyFraction float64, credib
 		GoodWorkersLoss:       0,
 		MaxStake:              10000,
 		MinStake:              100,
+		StakeLeft:             0,
+		BlackListing:          blackListing,
 		//Holders:                     map[string][]string{},
 		WithoutConnectRemoteForTest: withoutConnectRemoteForTest,
 	}
@@ -110,13 +114,16 @@ func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worke
 		s.RLock()
 		pickedId := s.WorkersId[rand.Intn(len(s.WorkersId))]
 		s.RUnlock()
-		log2.Debug.Printf("worker:%s is picked", pickedId)
+		log2.Debug.Printf("worker:%s is picked.", pickedId)
 		contain := false
 		worker, err := s.GetWorker(pickedId)
 		if err != nil {
 			contain = true
-		} else if worker.Balance < s.MinStake {
-			contain = true
+		} else {
+			log2.Debug.Printf("picked workers balance: %d", worker.Balance)
+			if worker.Balance < s.MinStake {
+				contain = true
+			}
 		}
 		for _, id := range picked {
 			if id.Id == pickedId {
@@ -145,6 +152,7 @@ func (s *Service) CreateNewBadWorker(workerId string, Addr string) (*Worker, err
 		return nil, err
 	} else {
 		worker.IsBad = true
+		s.StakeLeft += s.MaxStake
 		return worker, nil
 	}
 }
@@ -265,6 +273,9 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 		s.Lock()
 		s.Workers[workerId].Reputation += 1
 		s.Workers[workerId].Balance += 1
+		if s.Workers[workerId].IsBad {
+			s.StakeLeft += 1
+		}
 		s.Workers[workerId].GoodWorkCount += 1
 
 		stakeRate := float64(worker.Balance) / float64(s.MaxStake)
@@ -272,21 +283,24 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 			stakeRate = 1
 		}
 		rep = s.Workers[workerId].Reputation
-		n, err := crand.Int(crand.Reader, big.NewInt(100))
+		n, err := crand.Int(crand.Reader, big.NewInt(1000000))
 		if err != nil {
 			log2.Err.Printf("failed to get random number")
-		} else if n.Cmp(big.NewInt(int64((1-s.ReputationResetRate)*stakeRate*100))) <= -1 {
-			s.Workers[workerId].Credibility = stolerance.CalcWorkerCred(s.FaultyFraction, rep)
 		} else {
-			reset, err := crand.Int(crand.Reader, big.NewInt(100))
-			if err != nil {
-				log2.Err.Printf("failed to get random number")
-				s.Workers[workerId].Reputation = 0
+			resetRate := s.ReputationResetRate
+			if n.Cmp(big.NewInt(int64((1-resetRate)*stakeRate*1000000))) <= -1 {
+				s.Workers[workerId].Credibility = stolerance.CalcWorkerCred(s.FaultyFraction, rep)
 			} else {
-				s.Workers[workerId].Reputation = int(float64(s.Workers[workerId].Reputation) * (float64(reset.Int64()) / 100))
+				reset, err := crand.Int(crand.Reader, big.NewInt(100))
+				if err != nil {
+					log2.Err.Printf("failed to get random number")
+					s.Workers[workerId].Reputation = 0
+				} else {
+					s.Workers[workerId].Reputation = int(float64(s.Workers[workerId].Reputation) * (float64(reset.Int64()) / 100))
+				}
+				rep = s.Workers[workerId].Reputation
+				s.Workers[workerId].Credibility = stolerance.CalcWorkerCred(s.FaultyFraction, rep)
 			}
-			rep = s.Workers[workerId].Reputation
-			s.Workers[workerId].Credibility = stolerance.CalcWorkerCred(s.FaultyFraction, rep)
 		}
 		s.Unlock()
 		s.calcAverageCredibility()
@@ -294,17 +308,23 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 		//バリデーション失敗時の処理
 		s.Lock()
 		s.Workers[workerId].Reputation = 0
-		balanceBefore := s.Workers[workerId].Balance
-		if validateByBridge {
-			s.Workers[workerId].Balance = 0
-		} else {
-			s.Workers[workerId].Balance = int(s.Workers[workerId].Balance / 2)
-		}
-		balanceAfter := s.Workers[workerId].Balance
-		if s.Workers[workerId].IsBad {
-			s.BadWorkersLoss += balanceBefore - balanceAfter
-		} else {
-			s.GoodWorkersLoss += balanceBefore - balanceAfter
+		if s.BlackListing {
+			balanceBefore := s.Workers[workerId].Balance
+			if validateByBridge {
+				s.Workers[workerId].Balance = 0
+			} else {
+				s.Workers[workerId].Balance = int(s.Workers[workerId].Balance / 2)
+				log2.Err.Printf("Faild to validate On Bridge")
+			}
+			balanceAfter := s.Workers[workerId].Balance
+			sub := balanceBefore - balanceAfter
+			if s.Workers[workerId].IsBad {
+				log2.Debug.Printf("balance bfore[%d] balance after[%d] sub[%d]", balanceBefore, balanceAfter, sub)
+				s.BadWorkersLoss += sub
+				s.StakeLeft -= sub
+			} else {
+				s.GoodWorkersLoss += sub
+			}
 		}
 		s.Workers[workerId].GoodWorkCount = 0
 		rep = s.Workers[workerId].Reputation

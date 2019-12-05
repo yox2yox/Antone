@@ -26,7 +26,7 @@ type Peer struct {
 	Orders     *orders.Service
 }
 
-func New(config *config.BridgeConfig, debug bool, faultyFraction float64, credibilityThreshold float64, reputationResetRate float64) (*Peer, error) {
+func New(config *config.BridgeConfig, debug bool, faultyFraction float64, credibilityThreshold float64, reputationResetRate float64, setWathcer bool, blackListing bool) (*Peer, error) {
 
 	peer := &Peer{}
 
@@ -45,7 +45,7 @@ func New(config *config.BridgeConfig, debug bool, faultyFraction float64, credib
 	}
 
 	{ //setup Accounting
-		peer.Accounting = accounting.NewService(debug, faultyFraction, credibilityThreshold, reputationResetRate)
+		peer.Accounting = accounting.NewService(debug, faultyFraction, credibilityThreshold, reputationResetRate, blackListing)
 		pb.RegisterAccountingServer(peer.GrpcServer, accounting.NewEndpoint(peer.Accounting))
 	}
 
@@ -55,7 +55,7 @@ func New(config *config.BridgeConfig, debug bool, faultyFraction float64, credib
 	}
 
 	{ //setup orders
-		peer.Orders = orders.NewService(peer.Accounting, peer.Datapool, debug, peer.Config.Order.CalcErrorRate)
+		peer.Orders = orders.NewService(peer.Accounting, peer.Datapool, debug, peer.Config.Order.CalcErrorRate, setWathcer)
 		pb.RegisterOrdersServer(peer.GrpcServer, orders.NewEndpoint(peer.Config.Order, peer.Orders, peer.Accounting))
 	}
 

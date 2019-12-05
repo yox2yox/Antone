@@ -52,10 +52,11 @@ type Service struct {
 	OnBridgeCount               int
 	NodesAvg                    float64
 	NodesSum                    int
+	SetWatcher                  bool
 	stopChan                    chan struct{}
 }
 
-func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool) *Service {
+func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool) *Service {
 	return &Service{
 		ValidationRequests:          []*ValidationRequest{},
 		Accounting:                  accounting,
@@ -68,6 +69,7 @@ func NewService(accounting *accounting.Service, datapool *datapool.Service, with
 		FailedCount:                 0,
 		RejectedCount:               0,
 		OnBridgeCount:               0,
+		SetWatcher:                  setWatcher,
 		stopChan:                    make(chan struct{}),
 	}
 }
@@ -293,11 +295,11 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []Valid
 //バリデーション結果に基づいて評価値を登録する
 func (s *Service) commitReputation(holderId string, results []ValidationResult, conclusion *ValidationResult, validateByBridge bool) {
 	if conclusion != nil {
-		if conclusion.IsRejected == true {
+		/*if conclusion.IsRejected == true {
 			s.Accounting.UpdateReputation(holderId, false, validateByBridge)
 		} else {
 			s.Accounting.UpdateReputation(holderId, true, validateByBridge)
-		}
+		}*/
 	}
 	for _, res := range results {
 		confirmed := false
@@ -472,17 +474,17 @@ func (s *Service) Run() {
 							log2.Err.Printf("failed to validation %#v", err)
 						} else if results != nil {
 							validateByBridge := false
-							if s.DoesValidationNeed(results, *conclusion) {
+							if s.DoesValidationNeed(results, *conclusion) && s.SetWatcher {
 								conclusion = s.ValidateOnBridge(*vreq.ValidatableCode)
 								s.OnBridgeCount++
 								validateByBridge = true
-							} else {
-								/*conclusion = s.ValidateOnBridge(*vreq.ValidatableCode)
+							} /* else if s.SetWatcher {
+								conclusion = s.ValidateOnBridge(*vreq.ValidatableCode)
 								if s.DoesValidationNeed(results, *conclusion) {
 									s.OnBridgeCount++
 									validateByBridge = true
-								}*/
-							}
+								}
+							}*/
 							//結果から評価値を登録
 							fmt.Printf("INFO %s [] END - Validations by remote workers", time.Now())
 							s.commitReputation(vreq.HolderId, results, conclusion, validateByBridge)
@@ -511,7 +513,7 @@ func (s *Service) Run() {
 									}
 								}
 							}
-							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%f] LOSS_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss, s.OnBridgeCount)
+							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%f] LOSS_B[%d] LEFT_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.StakeLeft, s.Accounting.GoodWorkersLoss, s.OnBridgeCount)
 						}
 						//結果を送信
 						if conclusion != nil && conclusion.IsRejected == false {

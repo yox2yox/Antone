@@ -38,7 +38,7 @@ func main() {
 		config.Order.NeedValidationNum = *validatorsNumOpt
 	}
 
-	peer, err := bridge.New(config, false)
+	peer, err := bridge.New(config, false, false)
 	if err != nil {
 		fmt.Printf("FATAL %s [] Failed to initialize peer", time.Now())
 	}

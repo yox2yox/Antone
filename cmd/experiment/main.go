@@ -28,6 +28,8 @@ var (
 	faultyFrationOpt = flag.Float64("fault", 0.4, "help message for \"fault\" option")
 	credibilityOpt   = flag.Float64("cred", 0.9, "help message for \"cred\" option")
 	resetRateOpt     = flag.Float64("reset", 0.5, "help message for \"reset\" option")
+	watcherOpt       = flag.Bool("watcher", false, "help message for \"watcher\" option")
+	blackListingOpt  = flag.Bool("blacklist", false, "help message for \"blacklist\" option")
 )
 
 func main() {
@@ -72,7 +74,7 @@ func main() {
 	}
 
 	//ブリッジ起動
-	peer, err := bridge.New(config, false, *faultyFrationOpt, *credibilityOpt, *resetRateOpt)
+	peer, err := bridge.New(config, false, *faultyFrationOpt, *credibilityOpt, *resetRateOpt, *watcherOpt, *blackListingOpt)
 	if err != nil {
 		fmt.Printf("FATAL %s [] Failed to initialize peer", time.Now())
 	}
