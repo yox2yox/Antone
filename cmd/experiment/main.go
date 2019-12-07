@@ -27,7 +27,7 @@ var (
 	requestsCountOpt = flag.Int("req", 1, "help message for \"port\" option")
 	faultyFrationOpt = flag.Float64("fault", 0.4, "help message for \"fault\" option")
 	credibilityOpt   = flag.Float64("cred", 0.9, "help message for \"cred\" option")
-	resetRateOpt     = flag.Float64("reset", 0.5, "help message for \"reset\" option")
+	resetRateOpt     = flag.Float64("reset", 0, "help message for \"reset\" option")
 	watcherOpt       = flag.Bool("watcher", false, "help message for \"watcher\" option")
 	blackListingOpt  = flag.Bool("blacklist", false, "help message for \"blacklist\" option")
 )

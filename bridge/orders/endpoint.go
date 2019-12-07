@@ -53,6 +53,7 @@ func (e *Endpoint) RequestValidatableCode(ctx context.Context, vCodeRequest *pb.
 
 	//Wait For Validation
 	for e.Orders.getWaitingValidationRequestsCount() > 0 {
+		log2.Debug.Printf("waiting validation...[Waiting:%d]", e.Orders.getWaitingValidationRequestsCount())
 	}
 	return vcode, nil
 

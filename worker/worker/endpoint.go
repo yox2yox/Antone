@@ -47,6 +47,7 @@ func (e *Endpoint) GetValidatableCode(ctx context.Context, vCodeRequest *pb.Vali
 func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.ValidatableCode) (*pb.ValidationResult, error) {
 	log2.Debug.Printf("got bad reputations %#v", validatableCode.Badreputations)
 
+	/* Attack 1
 	creds := []float64{}
 	for _, rep := range validatableCode.Badreputations {
 		wcred := stolerance.CalcWorkerCred(0.4, int(rep))
@@ -56,9 +57,29 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 	log2.Debug.Printf("got bad results %#v", results)
 	gcred := stolerance.CalcRGroupCred(0, results)
 	log2.Debug.Printf("group cred for bad workers is %f", gcred)
-	if e.BadMode && gcred >= 0.9 {
+	if e.BadMode && gcred >= float64(validatableCode.Threshould) {
 		return &pb.ValidationResult{Pool: -1, Reject: false}, nil
 	}
+	*/
+
+	/* Attack 2 : 不正ワーカ数
+	if e.BadMode && len(validatableCode.Badreputations) >= 5 {
+		return &pb.ValidationResult{Pool: -1, Reject: false}, nil
+	}
+	*/
+
+	if e.BadMode && len(validatableCode.Badreputations) >= 2 {
+		badThreshold := true
+		for _, rep := range validatableCode.Badreputations {
+			if stolerance.CalcWorkerCred(0.4, int(rep)) < float64(validatableCode.Threshould) {
+				badThreshold = false
+			}
+		}
+		if badThreshold {
+			return &pb.ValidationResult{Pool: -1, Reject: false}, nil
+		}
+	}
+
 	pool := validatableCode.Data + validatableCode.Add
 	e.Reputation += 1
 	return &pb.ValidationResult{Pool: pool, Reject: false}, nil

@@ -328,7 +328,7 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 
 	errChan := make(chan error)                //エラー送信用チャネルs
 	resultChan := make(chan *ValidationResult) //バリデーション結果送信チャネル
-
+	log2.Debug.Printf("validation start with %d validators", picknum)
 	nextpick := picknum
 
 	for {
@@ -399,13 +399,13 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 			if needworker > 0 {
 				conclusion = nil
 				nextpick = needworker - len(waitlist)
-				log2.Debug.Printf("nextpick is %d", nextpick)
 				if nextpick < 0 {
 					nextpick = 0
 				}
+				log2.Debug.Printf("nextpick is %d", nextpick)
 			} else if needworker < 0 {
 				return results, nil, ErrFailedToCalcNeedWorker
-			} else {
+			} else if len(waitlist) <= 0 {
 				return results, conclusion, nil
 			}
 		case <-ctx.Done():
@@ -445,7 +445,6 @@ func (s *Service) Run() {
 			return
 		default:
 			if len(s.ValidationRequests) > 0 {
-
 				//利用可能なリクエストが出てくるまでループ
 				waitingvreq := []*ValidationRequest{}
 				available := false
@@ -513,7 +512,7 @@ func (s *Service) Run() {
 									}
 								}
 							}
-							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%f] LOSS_B[%d] LEFT_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.StakeLeft, s.Accounting.GoodWorkersLoss, s.OnBridgeCount)
+							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%d] NODES_AVG[%f] LOSS_B[%d] LEFT_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, len(results), s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.StakeLeft, s.Accounting.GoodWorkersLoss, s.OnBridgeCount)
 						}
 						//結果を送信
 						if conclusion != nil && conclusion.IsRejected == false {
