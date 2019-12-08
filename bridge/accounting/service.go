@@ -146,6 +146,38 @@ func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worke
 	return picked, nil
 }
 
+//Thresoldに達するまでワーカーを選出
+func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int, exception []string) ([]*Worker, error) {
+	group := []float64{}
+	gotWorkers := []*Worker{}
+	for {
+		workers, err := s.SelectValidationWorkers(1, exception)
+		if err != nil || len(workers) < 1 {
+			return nil, err
+		} else {
+			credibility := stolerance.CalcWorkerCred(s.FaultyFraction, workers[0].Reputation)
+			gotWorkers := append(gotWorkers, workers[0])
+			group := append(group, credibility)
+			exception = append(exception, workers[0].Id)
+			gCred := stolerance.CalcRGroupCred(0, [][]float64{group})
+			if gCred >= s.CredibilityThreshould {
+				if len(gotWorkers) >= needAtLeast {
+					return gotWorkers, nil
+				} else {
+					need := needAtLeast - len(gotWorkers)
+					workers, err := s.SelectValidationWorkers(need, exception)
+					gotWorkers := append(gotWorkers, workers...)
+					if err != nil {
+						return nil, err
+					} else {
+						return gotWorkers, nil
+					}
+				}
+			}
+		}
+	}
+}
+
 func (s *Service) CreateNewBadWorker(workerId string, Addr string) (*Worker, error) {
 	worker, err := s.CreateNewWorker(workerId, Addr)
 	if err != nil {
