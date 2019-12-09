@@ -9,6 +9,7 @@ import (
 	"time"
 	"yox2yox/antone/internal/log2"
 	"yox2yox/antone/pkg/stolerance"
+	"yox2yox/antone/bridge/orders"
 )
 
 type Client struct {
@@ -98,6 +99,46 @@ func (s *Service) GetWorkersCount() int {
 	return len(s.Workers)
 }
 
+func (s *Service) validationResultsToCredGroups(results []orders.ValidationResult) ([][]float64,[]int32,error) {
+	credG := [][]float64{}
+
+	resultmap := map[int32][]float64{}
+	rejected := []float64{}
+	for _,result := range results {
+		worker, err := GetWorker(res.WorkerId)
+		if err == nil {
+			if res.IsRejected {
+				rejected = append(rejected, worker.Credibility)
+				log2.Debug.Printf("calc is rejected by %s", worker.Id)
+			} else if !res.IsError {
+				log2.Debug.Printf("result is %d", res.Data)
+				_, exist := resultmap[res.Data]
+				if exist {
+					resultmap[res.Data] = append(resultmap[res.Data], worker.Credibility)
+				} else {
+					resultmap[res.Data] = []float64{worker.Credibility}
+				}
+			} else {
+				log2.Debug.Printf("result is error")
+			}
+		} else {
+			log2.Debug.Printf("failed to get worker account %s %#v", res.WorkerId, err)
+		}
+	}
+
+	resultData := []int32{}
+	for data, res := range resultmap {
+		credsG = append(credsG, res)
+		resultData = append(resultData, data)
+	}
+	if len(rejected) > 0 {
+		credsG = append(credsG, rejected)
+	}
+
+	return credG,resultData,nil
+
+}
+
 //exceptionを除くworkerの中からnum台選択して返す
 func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worker, error) {
 
@@ -147,8 +188,12 @@ func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worke
 }
 
 //Thresoldに達するまでワーカーを選出
-func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int, exception []string) ([]*Worker, error) {
-	group := []float64{}
+func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int,credG [][]float64,targetIndex int, exception []string) ([]*Worker, error) {
+	
+	if len(credG) <= targetIndex {
+		return nil,error("index is out of range")
+	}
+	
 	gotWorkers := []*Worker{}
 	for {
 		workers, err := s.SelectValidationWorkers(1, exception)
@@ -157,9 +202,9 @@ func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int, exceptio
 		} else {
 			credibility := stolerance.CalcWorkerCred(s.FaultyFraction, workers[0].Reputation)
 			gotWorkers := append(gotWorkers, workers[0])
-			group := append(group, credibility)
+			credG[targetIndex] := append(credG[targetIndex], credibility)
 			exception = append(exception, workers[0].Id)
-			gCred := stolerance.CalcRGroupCred(0, [][]float64{group})
+			gCred := stolerance.CalcRGroupCred(0, credG)
 			if gCred >= s.CredibilityThreshould {
 				if len(gotWorkers) >= needAtLeast {
 					return gotWorkers, nil
