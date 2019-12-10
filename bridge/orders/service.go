@@ -329,25 +329,18 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 	errChan := make(chan error)                //エラー送信用チャネルs
 	resultChan := make(chan *ValidationResult) //バリデーション結果送信チャネル
 	log2.Debug.Printf("validation start with %d validators", picknum)
-	nextpick := picknum
+	nextpicks, err := s.Accounting.SelectValidationWorkersWithThresold(picknum, [][]float64{[]float64{}}, 0, unavailable)
+	if err != nil {
+		return []ValidationResult{}, nil, err
+	}
 
 	for {
-		if nextpick > 0 {
-			log2.Debug.Printf("start to pick %d validators", nextpick)
-			//ワーカー取得
-			pickedWorkers, err := s.Accounting.SelectValidationWorkers(nextpick, unavailable)
+		if len(nextpicks) > 0 {
 
 			if err == nil {
-				log2.Debug.Printf("Success to pick worker %d", len(pickedWorkers))
-			} else {
-				log2.Err.Printf("Failed to pick worker %#v", err)
-			}
-
-			if err == nil {
-				nextpick = 0
 				pickedIDs := []string{}
 				badreputations := []int32{}
-				for _, worker := range pickedWorkers {
+				for _, worker := range nextpicks {
 					pickedIDs = append(pickedIDs, worker.Id)
 					if worker.IsBad {
 						log2.Debug.Printf("bad woker detected")
@@ -358,7 +351,7 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 				waitlist = append(waitlist, pickedIDs...)
 
 				//各ワーカにValidationリクエスト送信
-				for _, worker := range pickedWorkers {
+				for _, worker := range nextpicks {
 					if s.WithoutConnectRemoteForTest == false {
 						go func(target *accounting.Worker) {
 							validationResult := s.validateCodeRemote(target, vCode, badreputations)
@@ -370,6 +363,7 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 						}(worker)
 					}
 				}
+				nextpicks = []*accounting.Worker
 			} else {
 				log2.Debug.Printf("sending error to errchannel")
 				go func() {
@@ -392,10 +386,11 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 			s.Unlock()
 			log2.Debug.Printf("delete ID[%s] from waitlist WAITING[%d]", res.WorkerId, len(waitlist))
 			results = append(results, *res)
-			var needworker int
-			needworker, concval := s.calcNeedAdditionalWorkerAndResult(picknum, results)
-			log2.Debug.Printf("need %d more result", needworker)
-			conclusion = &concval
+
+			credG, resultData, err := s.Accounting.ValidationResultsToCredGroups(results)
+			concval, maxGroup := stolerance.CalcNeedWorkerCountAndBestGroup(s.Accounting.AvarageCredibility, credG, s.Accounting.CredibilityThreshould)
+			nextpicks = s.Accounting.SelectValidationWorkersWithThreshold(picknum, credG, maxGroup,waitlist, unavailable)
+
 			if needworker > 0 {
 				conclusion = nil
 				nextpick = needworker - len(waitlist)
