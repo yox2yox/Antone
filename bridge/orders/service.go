@@ -318,18 +318,57 @@ func (s *Service) commitReputation(holderId string, results []ValidationResult, 
 	}
 }
 
+func (s *Service) ValidationResultsToCredGroups(results []ValidationResult) ([][]float64, []int32, error) {
+	credG := [][]float64{}
+
+	resultmap := map[int32][]float64{}
+	rejected := []float64{}
+	for _, res := range results {
+		worker, err := s.Accounting.GetWorker(res.WorkerId)
+		if err == nil {
+			if res.IsRejected {
+				rejected = append(rejected, worker.Credibility)
+				log2.Debug.Printf("calc is rejected by %s", worker.Id)
+			} else if !res.IsError {
+				log2.Debug.Printf("result is %d", res.Data)
+				_, exist := resultmap[res.Data]
+				if exist {
+					resultmap[res.Data] = append(resultmap[res.Data], worker.Credibility)
+				} else {
+					resultmap[res.Data] = []float64{worker.Credibility}
+				}
+			} else {
+				log2.Debug.Printf("result is error")
+			}
+		} else {
+			log2.Debug.Printf("failed to get worker account %s %#v", res.WorkerId, err)
+		}
+	}
+
+	resultData := []int32{}
+	for data, res := range resultmap {
+		credG = append(credG, res)
+		resultData = append(resultData, data)
+	}
+	if len(rejected) > 0 {
+		credG = append(credG, rejected)
+	}
+
+	return credG, resultData, nil
+
+}
+
 //ValidatableCodeを検証
 func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string, vCode *pb.ValidatableCode) ([]ValidationResult, *ValidationResult, error) {
 
 	unavailable := []string{}
 	waitlist := []string{}
 	results := []ValidationResult{}
-	var conclusion *ValidationResult
 
 	errChan := make(chan error)                //エラー送信用チャネルs
 	resultChan := make(chan *ValidationResult) //バリデーション結果送信チャネル
 	log2.Debug.Printf("validation start with %d validators", picknum)
-	nextpicks, err := s.Accounting.SelectValidationWorkersWithThresold(picknum, [][]float64{[]float64{}}, 0, unavailable)
+	nextpicks, err := s.Accounting.SelectValidationWorkersWithThreshold(picknum, [][]float64{[]float64{}}, 0, []string{}, unavailable)
 	if err != nil {
 		return []ValidationResult{}, nil, err
 	}
@@ -363,7 +402,7 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 						}(worker)
 					}
 				}
-				nextpicks = []*accounting.Worker
+				nextpicks = []*accounting.Worker{}
 			} else {
 				log2.Debug.Printf("sending error to errchannel")
 				go func() {
@@ -377,6 +416,7 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 			log2.Debug.Printf("get validation result DATA[%d] FROM[%s] REJECT[%v]", res.Data, res.WorkerId, res.IsRejected)
 			tmp := []string{}
 			s.Lock()
+			//結果を受け取ったワーカーをwaitlistから削除
 			for _, id := range waitlist {
 				if id != res.WorkerId {
 					tmp = append(tmp, id)
@@ -387,22 +427,25 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 			log2.Debug.Printf("delete ID[%s] from waitlist WAITING[%d]", res.WorkerId, len(waitlist))
 			results = append(results, *res)
 
-			credG, resultData, err := s.Accounting.ValidationResultsToCredGroups(results)
-			concval, maxGroup := stolerance.CalcNeedWorkerCountAndBestGroup(s.Accounting.AvarageCredibility, credG, s.Accounting.CredibilityThreshould)
-			nextpicks = s.Accounting.SelectValidationWorkersWithThreshold(picknum, credG, maxGroup,waitlist, unavailable)
+			credG, resultData, err := s.ValidationResultsToCredGroups(results)
+			if err != nil {
+				log2.Err.Printf("Failed to calc results credibility groups %#v", err)
+				return results, nil, err
+			}
+			log2.Debug.Printf("Got Credibility Groups is %#v", credG)
+			maxGroup := stolerance.CalcBestGroup(credG, s.Accounting.CredibilityThreshould)
+			nextpicks, err = s.Accounting.SelectValidationWorkersWithThreshold(0, credG, maxGroup, waitlist, unavailable)
+			if err != nil {
+				log2.Err.Printf("Failed to calc Next Workers %#v", err)
+				return results, nil, err
+			}
 
-			if needworker > 0 {
-				conclusion = nil
-				nextpick = needworker - len(waitlist)
-				if nextpick < 0 {
-					nextpick = 0
-				}
-				log2.Debug.Printf("nextpick is %d", nextpick)
-			} else if needworker < 0 {
-				return results, nil, ErrFailedToCalcNeedWorker
-			} else if len(waitlist) <= 0 {
+			//nextpicksもwaitlistも空になったら終了
+			if len(nextpicks) <= 0 && len(waitlist) <= 0 {
+				conclusion := &ValidationResult{WorkerId: "", Data: resultData[maxGroup], IsRejected: false, IsError: false}
 				return results, conclusion, nil
 			}
+
 		case <-ctx.Done():
 			return results, nil, ctx.Err()
 		case err := <-errChan:

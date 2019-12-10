@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"sync"
 	"time"
-	"yox2yox/antone/bridge/orders"
 	"yox2yox/antone/internal/log2"
 	"yox2yox/antone/pkg/stolerance"
 )
@@ -99,46 +98,6 @@ func (s *Service) GetWorkersCount() int {
 	return len(s.Workers)
 }
 
-func (s *Service) ValidationResultsToCredGroups(results []orders.ValidationResult) ([][]float64, []int32, error) {
-	credG := [][]float64{}
-
-	resultmap := map[int32][]float64{}
-	rejected := []float64{}
-	for _, result := range results {
-		worker, err := GetWorker(res.WorkerId)
-		if err == nil {
-			if res.IsRejected {
-				rejected = append(rejected, worker.Credibility)
-				log2.Debug.Printf("calc is rejected by %s", worker.Id)
-			} else if !res.IsError {
-				log2.Debug.Printf("result is %d", res.Data)
-				_, exist := resultmap[res.Data]
-				if exist {
-					resultmap[res.Data] = append(resultmap[res.Data], worker.Credibility)
-				} else {
-					resultmap[res.Data] = []float64{worker.Credibility}
-				}
-			} else {
-				log2.Debug.Printf("result is error")
-			}
-		} else {
-			log2.Debug.Printf("failed to get worker account %s %#v", res.WorkerId, err)
-		}
-	}
-
-	resultData := []int32{}
-	for data, res := range resultmap {
-		credsG = append(credsG, res)
-		resultData = append(resultData, data)
-	}
-	if len(rejected) > 0 {
-		credsG = append(credsG, rejected)
-	}
-
-	return credG, resultData, nil
-
-}
-
 //exceptionを除くworkerの中からnum台選択して返す
 func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worker, error) {
 
@@ -188,7 +147,7 @@ func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worke
 }
 
 //Thresoldに達するまでワーカーを選出
-func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int, credG [][]float64, targetIndex int,waitlist []string, exception []string) ([]*Worker, error) {
+func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int, credG [][]float64, targetIndex int, waitlist []string, exception []string) ([]*Worker, error) {
 
 	if len(credG) <= targetIndex {
 		return nil, errors.New("index is out of range")
@@ -196,41 +155,41 @@ func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int, credG []
 
 	gotWorkers := []*Worker{}
 	for {
-		var workers []*Worker
-		if len(waitlist)<=0 {
-			workers, err := s.SelectValidationWorkers(1, exception)
-		} else {
-			workers = []*Worker{}
-			for _,workerid := range waitlist {
-				w,err = s.GetWorker(workerid)
-				if err != nil {
-					workers = append(workers,w)
+		if len(waitlist) > 0 {
+			for _, workerid := range waitlist {
+				w, err := s.GetWorker(workerid)
+				if err == nil {
+					credibility := stolerance.CalcWorkerCred(s.FaultyFraction, w.Reputation)
+					credG[targetIndex] = append(credG[targetIndex], credibility)
 				}
 			}
+			waitlist = []string{}
 		}
 
-		if err != nil || len(workers) < 1 {
-			return nil, err
-		} else {
-			credibility := stolerance.CalcWorkerCred(s.FaultyFraction, workers[0].Reputation)
-			gotWorkers := append(gotWorkers, workers[0])
-			credG[targetIndex] = append(credG[targetIndex], credibility)
-			exception = append(exception, workers[0].Id)
-			gCred := stolerance.CalcRGroupCred(0, credG)
-			if gCred >= s.CredibilityThreshould {
-				if len(gotWorkers) >= needAtLeast {
-					return gotWorkers, nil
+		gCred := stolerance.CalcRGroupCred(targetIndex, credG)
+		if gCred >= s.CredibilityThreshould {
+			log2.Debug.Printf("Got %d workers",len(gotWorkers))
+			if len(gotWorkers) >= needAtLeast {
+				return gotWorkers, nil
+			} else {
+				need := needAtLeast - len(gotWorkers)
+				workers, err := s.SelectValidationWorkers(need, exception)
+				if err != nil {
+					return nil, err
 				} else {
-					need := needAtLeast - len(gotWorkers)
-					workers, err := s.SelectValidationWorkers(need, exception)
-					gotWorkers := append(gotWorkers, workers...)
-					if err != nil {
-						return nil, err
-					} else {
-						return gotWorkers, nil
-					}
+					gotWorkers = append(gotWorkers, workers...)
+					return gotWorkers, nil
 				}
 			}
+		} else {
+			workers, err := s.SelectValidationWorkers(1, exception)
+			if err != nil || len(workers) < 1 {
+				return nil, err
+			}
+			credibility := stolerance.CalcWorkerCred(s.FaultyFraction, workers[0].Reputation)
+			gotWorkers = append(gotWorkers, workers[0])
+			credG[targetIndex] = append(credG[targetIndex], credibility)
+			exception = append(exception, workers[0].Id)
 		}
 	}
 }

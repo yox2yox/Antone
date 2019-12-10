@@ -18,6 +18,10 @@ func CalcRGroupCred(targetidx int, groups [][]float64) float64 {
 	var goodprob = []float64{}
 	var badprob = []float64{}
 
+	if len(groups) <= 0 {
+		return 0
+	}
+
 	for _, group := range groups {
 		good := lambda(group, false, []int{})
 		bad := lambda(group, true, []int{})
@@ -34,6 +38,26 @@ func CalcRGroupCred(targetidx int, groups [][]float64) float64 {
 	cred := (goodprob[targetidx] * lambda(badprob, false, []int{targetidx})) / allptn
 
 	return cred
+}
+
+func CalcBestGroup(groups [][]float64, threshold float64) int {
+	if threshold <= 0 || threshold >= 1 {
+		log2.Err.Printf("threshold is not propbability.(%.30f)", threshold)
+		return -1
+	}
+	maxgroup := 0
+	maxcred := 0.0
+	log2.Debug.Printf("start to calc groups' credibility%#v", groups)
+	for index, _ := range groups {
+		cred := CalcRGroupCred(index, groups)
+		if cred > maxcred {
+			maxcred = cred
+			maxgroup = index
+		}
+	}
+
+	log2.Debug.Printf("max credibility is %f", maxcred)
+	return maxgroup
 }
 
 func CalcNeedWorkerCountAndBestGroup(avgcred float64, groups [][]float64, threshold float64) (int, int) {

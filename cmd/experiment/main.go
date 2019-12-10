@@ -114,7 +114,7 @@ func main() {
 		log2.Debug.Printf("Addr:%s Bridge:%s Id:%s BadMode:%v", workerConfig.Server.Addr, workerConfig.Bridge.Addr, workerConfig.Bridge.AccountId, badmode)
 		peer, err := worker.New(workerConfig, false, badmode)
 		if err != nil {
-			log2.Err.Println("failed to initialize peer %#v", err)
+			log2.Err.Printf("failed to initialize peer %#v", err)
 			return
 		}
 		ctx, cancel := context.WithCancel(context.Background())

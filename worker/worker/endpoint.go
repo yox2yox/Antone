@@ -62,12 +62,13 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 	}
 	*/
 
-	/* Attack 2 : 不正ワーカ数
+	/* Attack 2 : 不正ワーカ数のみを利用
 	if e.BadMode && len(validatableCode.Badreputations) >= 5 {
 		return &pb.ValidationResult{Pool: -1, Reject: false}, nil
 	}
 	*/
 
+	// Attack 3 : Credibilityおよび不正ワーカ数を利用
 	if e.BadMode && len(validatableCode.Badreputations) >= 2 {
 		badThreshold := true
 		for _, rep := range validatableCode.Badreputations {
