@@ -1,1 +1,1 @@
-go run main.go -a localhost -port 10000 -num 100 -bad 40 -a localhost -req 10001 -validators 2 -reset 0.1 -fault 0.4 -cred 0.99 -blacklist -watcher
+go run main.go -a localhost -port 10000 -num 100 -bad 40 -a localhost -req 1001 -validators 2 -reset 0 -fault 0.4 -cred 0.99

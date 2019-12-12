@@ -20,6 +20,7 @@ import (
 
 var (
 	addrOpt          = flag.String("a", "", "help message for \"a\" option")
+	attackModeOpt    = flag.Int("attack", 0, "help message for \"attack\" option")
 	validatorsNumOpt = flag.Int("validators", 1, "help message for \"validators\" option")
 	portOpt          = flag.Int("port", -1, "help message for \"port\" option")
 	numOpt           = flag.Int("num", 1, "help message for \"port\" option")
@@ -112,7 +113,7 @@ func main() {
 			badnum--
 		}
 		log2.Debug.Printf("Addr:%s Bridge:%s Id:%s BadMode:%v", workerConfig.Server.Addr, workerConfig.Bridge.Addr, workerConfig.Bridge.AccountId, badmode)
-		peer, err := worker.New(workerConfig, false, badmode)
+		peer, err := worker.New(workerConfig, false, badmode, *attackModeOpt)
 		if err != nil {
 			log2.Err.Printf("failed to initialize peer %#v", err)
 			return

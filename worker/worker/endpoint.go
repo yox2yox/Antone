@@ -13,17 +13,19 @@ type Endpoint struct {
 	Datapool   *datapool.Service
 	Db         map[string]int32
 	Id         string
+	AttackMode int
 	BadMode    bool
 	Reputation int
 }
 
-func NewEndpoint(datapool *datapool.Service, badmode bool) *Endpoint {
+func NewEndpoint(datapool *datapool.Service, badmode bool, attackMode int) *Endpoint {
 	return &Endpoint{
 		Datapool: datapool,
 		Db: map[string]int32{
 			"client0": 0,
 		},
 		BadMode:    badmode,
+		AttackMode: attackMode,
 		Reputation: 0,
 	}
 }
@@ -47,37 +49,41 @@ func (e *Endpoint) GetValidatableCode(ctx context.Context, vCodeRequest *pb.Vali
 func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.ValidatableCode) (*pb.ValidationResult, error) {
 	log2.Debug.Printf("got bad reputations %#v", validatableCode.Badreputations)
 
-	/* Attack 1
-	creds := []float64{}
-	for _, rep := range validatableCode.Badreputations {
-		wcred := stolerance.CalcWorkerCred(0.4, int(rep))
-		creds = append(creds, wcred)
-	}
-	results := [][]float64{creds}
-	log2.Debug.Printf("got bad results %#v", results)
-	gcred := stolerance.CalcRGroupCred(0, results)
-	log2.Debug.Printf("group cred for bad workers is %f", gcred)
-	if e.BadMode && gcred >= float64(validatableCode.Threshould) {
-		return &pb.ValidationResult{Pool: -1, Reject: false}, nil
-	}
-	*/
-
-	/* Attack 2 : 不正ワーカ数のみを利用
-	if e.BadMode && len(validatableCode.Badreputations) >= 5 {
-		return &pb.ValidationResult{Pool: -1, Reject: false}, nil
-	}
-	*/
-
-	// Attack 3 : Credibilityおよび不正ワーカ数を利用
-	if e.BadMode && len(validatableCode.Badreputations) >= 2 {
-		badThreshold := true
+	if e.AttackMode == 1 {
+		// Attack 1
+		creds := []float64{}
 		for _, rep := range validatableCode.Badreputations {
-			if stolerance.CalcWorkerCred(0.4, int(rep)) < float64(validatableCode.Threshould) {
-				badThreshold = false
-			}
+			wcred := stolerance.CalcWorkerCred(0.4, int(rep))
+			creds = append(creds, wcred)
 		}
-		if badThreshold {
+		results := [][]float64{creds}
+		log2.Debug.Printf("got bad results %#v", results)
+		gcred := stolerance.CalcRGroupCred(0, results)
+		log2.Debug.Printf("group cred for bad workers is %f", gcred)
+		if e.BadMode && gcred >= float64(validatableCode.Threshould) {
 			return &pb.ValidationResult{Pool: -1, Reject: false}, nil
+		}
+	}
+
+	if e.AttackMode == 2 {
+		// Attack 2 : 不正ワーカ数のみを利用
+		if e.BadMode && len(validatableCode.Badreputations) >= 5 {
+			return &pb.ValidationResult{Pool: -1, Reject: false}, nil
+		}
+	}
+
+	if e.AttackMode == 3 {
+		// Attack 3 : Credibilityおよび不正ワーカ数を利用
+		if e.BadMode && len(validatableCode.Badreputations) >= 2 {
+			badThreshold := true
+			for _, rep := range validatableCode.Badreputations {
+				if stolerance.CalcWorkerCred(0.4, int(rep)) < float64(validatableCode.Threshould) {
+					badThreshold = false
+				}
+			}
+			if badThreshold {
+				return &pb.ValidationResult{Pool: -1, Reject: false}, nil
+			}
 		}
 	}
 
