@@ -2,9 +2,6 @@ package worker
 
 import (
 	"context"
-	"crypto/rand"
-	"fmt"
-	"math/big"
 	"net"
 	"net/http"
 	"time"
@@ -74,13 +71,7 @@ func (p *Peer) Run(ctx context.Context) error {
 			clientAccount := bpb.NewAccountingClient(connBridge)
 			ctxAccount, accountCancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer accountCancel()
-			max := new(big.Int)
-			max.SetInt64(int64(p.WorkerConfig.Bridge.AccountRandMax))
-			n, err := rand.Int(rand.Reader, max)
-			if err != nil {
-				return err
-			}
-			accountid := fmt.Sprint(n.Int64())
+			accountid := p.WorkerConfig.Server.Addr
 			reqSignup := &bpb.SignupWorkerRequest{Id: accountid, Addr: p.WorkerConfig.Server.Addr, IsBad: p.BadMode}
 			_, err = clientAccount.SignupWorker(ctxAccount, reqSignup)
 			if err != nil {

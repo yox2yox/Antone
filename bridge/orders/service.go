@@ -19,6 +19,7 @@ import (
 var (
 	ErrGottenDataIsNil        = errors.New("You got data but it's nil")
 	ErrFailedToCalcNeedWorker = errors.New("Failed to calclate need worker count")
+	ErrFailedToGetWorkers     = errors.New("Failed to get wokrers")
 )
 
 type ValidationRequest struct {
@@ -33,6 +34,7 @@ type ValidationResult struct {
 	Data       int32
 	IsRejected bool
 	IsError    bool
+	IsFistNode bool
 }
 
 type Service struct {
@@ -44,6 +46,7 @@ type Service struct {
 	Running                     bool
 	WithoutConnectRemoteForTest bool
 	CalcER                      bool
+	StepVoting                  bool
 	ErrCount                    int
 	FailedCount                 int
 	SuccessCount                int
@@ -56,7 +59,7 @@ type Service struct {
 	stopChan                    chan struct{}
 }
 
-func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool) *Service {
+func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool) *Service {
 	return &Service{
 		ValidationRequests:          []*ValidationRequest{},
 		Accounting:                  accounting,
@@ -70,6 +73,7 @@ func NewService(accounting *accounting.Service, datapool *datapool.Service, with
 		RejectedCount:               0,
 		OnBridgeCount:               0,
 		SetWatcher:                  setWatcher,
+		StepVoting:                  stepVoting,
 		stopChan:                    make(chan struct{}),
 	}
 }
@@ -142,7 +146,7 @@ func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add
 	}
 }
 
-func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.ValidatableCode, badreputations []int32) *ValidationResult {
+func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.ValidatableCode, badreputations []int32, firstNodeIsFault bool) *ValidationResult {
 	conn, err := grpc.Dial(worker.Addr, grpc.WithInsecure())
 	if err != nil {
 		log2.Err.Printf("failed to connect to remote %#v", err)
@@ -151,7 +155,7 @@ func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.Valida
 	workerClient := workerpb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add, Reputation: int32(worker.Reputation), Badreputations: badreputations, Threshould: float32(s.Accounting.CredibilityThreshould), Resetrate: float32(s.Accounting.ReputationResetRate)}
+	vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add, Reputation: int32(worker.Reputation), Badreputations: badreputations, Threshould: float32(s.Accounting.CredibilityThreshould), Resetrate: float32(s.Accounting.ReputationResetRate), FirstNodeIsfault: firstNodeIsFault, FaultyFraction: s.Accounting.FaultyFraction}
 	validationResult, err := workerClient.OrderValidation(ctx, vCodeWorker)
 	if err != nil {
 		log2.Err.Printf("failed to validation on remote %#v", err)
@@ -209,7 +213,7 @@ func (s *Service) removeWaitingList(userId string) {
 }
 
 //結果リストから、必要な追加ワーカ数および最も多数だった結果を返す
-func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []ValidationResult) (int, ValidationResult) {
+/*func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []ValidationResult) (int, ValidationResult) {
 
 	log2.Debug.Printf("start to calculate conclusion%#v", results)
 
@@ -219,6 +223,7 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []Valid
 		worker, err := s.Accounting.GetWorker(res.WorkerId)
 		if err == nil {
 			if res.IsRejected {
+				cred := stolerance.CalcWorkerCred()
 				rejected = append(rejected, worker.Credibility)
 				log2.Debug.Printf("calc is rejected by %s", worker.Id)
 			} else if !res.IsError {
@@ -290,11 +295,12 @@ func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []Valid
 
 	}
 
-}
+}*/
 
 //バリデーション結果に基づいて評価値を登録する
 func (s *Service) commitReputation(holderId string, results []ValidationResult, conclusion *ValidationResult, validateByBridge bool) {
 	if conclusion != nil {
+		//データホルダーの評価値を登録
 		/*if conclusion.IsRejected == true {
 			s.Accounting.UpdateReputation(holderId, false, validateByBridge)
 		} else {
@@ -302,6 +308,7 @@ func (s *Service) commitReputation(holderId string, results []ValidationResult, 
 		}*/
 	}
 	for _, res := range results {
+		//ワーカの評価値を登録
 		confirmed := false
 		//TODO: nilチェック
 		if conclusion == nil {
@@ -314,7 +321,11 @@ func (s *Service) commitReputation(holderId string, results []ValidationResult, 
 				confirmed = true
 			}
 		}
-		s.Accounting.UpdateReputation(res.WorkerId, confirmed, validateByBridge)
+		if confirmed == false {
+			s.Accounting.UpdateReputation(res.WorkerId, confirmed, validateByBridge)
+		} else if s.StepVoting == false || res.IsFistNode {
+			s.Accounting.UpdateReputation(res.WorkerId, confirmed, validateByBridge)
+		}
 	}
 }
 
@@ -326,16 +337,26 @@ func (s *Service) ValidationResultsToCredGroups(results []ValidationResult) ([][
 	for _, res := range results {
 		worker, err := s.Accounting.GetWorker(res.WorkerId)
 		if err == nil {
+			var credibility float64 = 0
+			if s.StepVoting {
+				if res.IsFistNode {
+					credibility = stolerance.CalcWorkerCred(s.Accounting.FaultyFraction, worker.Reputation)
+				} else {
+					credibility = stolerance.CalcSecondaryWorkerCred(s.Accounting.FaultyFraction, worker.Reputation)
+				}
+			} else {
+				credibility = stolerance.CalcWorkerCred(s.Accounting.FaultyFraction, worker.Reputation)
+			}
 			if res.IsRejected {
-				rejected = append(rejected, worker.Credibility)
+				rejected = append(rejected, credibility)
 				log2.Debug.Printf("calc is rejected by %s", worker.Id)
 			} else if !res.IsError {
 				log2.Debug.Printf("result is %d", res.Data)
 				_, exist := resultmap[res.Data]
 				if exist {
-					resultmap[res.Data] = append(resultmap[res.Data], worker.Credibility)
+					resultmap[res.Data] = append(resultmap[res.Data], credibility)
 				} else {
-					resultmap[res.Data] = []float64{worker.Credibility}
+					resultmap[res.Data] = []float64{credibility}
 				}
 			} else {
 				log2.Debug.Printf("result is error")
@@ -368,17 +389,37 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 	errChan := make(chan error)                //エラー送信用チャネルs
 	resultChan := make(chan *ValidationResult) //バリデーション結果送信チャネル
 	log2.Debug.Printf("validation start with %d validators", picknum)
-	nextpicks, err := s.Accounting.SelectValidationWorkersWithThreshold(picknum, [][]float64{[]float64{}}, 0, []string{}, unavailable)
-	if err != nil {
-		return []ValidationResult{}, nil, err
+	var nextpicks []*accounting.Worker
+	var firstPick *accounting.Worker
+	secondPicked := false
+	firstNodeIsFault := false
+	var err error
+	if s.StepVoting {
+		nextpicks, err = s.Accounting.SelectValidationWorkers(1, []string{})
+		if err != nil {
+			log2.Debug.Printf("first pick failed %#v", err)
+			return []ValidationResult{}, nil, err
+		}
+		if len(nextpicks) < 1 {
+			log2.Debug.Printf("first pick failed")
+			return []ValidationResult{}, nil, ErrFailedToGetWorkers
+		} else {
+			log2.Debug.Printf("first pick finished")
+			firstPick = nextpicks[0]
+		}
+	} else {
+		nextpicks, err = s.Accounting.SelectValidationWorkersWithThreshold(picknum, [][]float64{[]float64{}}, 0, false, []string{}, unavailable)
+		if err != nil {
+			return []ValidationResult{}, nil, err
+		}
 	}
-
+	err = nil
+	badreputations := []int32{}
 	for {
 		if len(nextpicks) > 0 {
 
 			if err == nil {
 				pickedIDs := []string{}
-				badreputations := []int32{}
 				for _, worker := range nextpicks {
 					pickedIDs = append(pickedIDs, worker.Id)
 					if worker.IsBad {
@@ -392,8 +433,9 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 				//各ワーカにValidationリクエスト送信
 				for _, worker := range nextpicks {
 					if s.WithoutConnectRemoteForTest == false {
+						log2.Debug.Printf("Send Validation Request to %s firstNodeIsFault[%#v]", worker.Addr, firstNodeIsFault)
 						go func(target *accounting.Worker) {
-							validationResult := s.validateCodeRemote(target, vCode, badreputations)
+							validationResult := s.validateCodeRemote(target, vCode, badreputations, firstNodeIsFault)
 							resultChan <- validationResult
 						}(worker)
 					} else {
@@ -425,6 +467,15 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 			waitlist = tmp
 			s.Unlock()
 			log2.Debug.Printf("delete ID[%s] from waitlist WAITING[%d]", res.WorkerId, len(waitlist))
+			if s.StepVoting && res.WorkerId == firstPick.Id {
+				res.IsFistNode = true
+				if res.Data == -1 {
+					s.Lock()
+					firstNodeIsFault = true
+					s.Unlock()
+					log2.Debug.Printf("first BadNode sabotaged")
+				}
+			}
 			results = append(results, *res)
 
 			credG, resultData, err := s.ValidationResultsToCredGroups(results)
@@ -434,7 +485,12 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 			}
 			log2.Debug.Printf("Got Credibility Groups is %#v", credG)
 			maxGroup := stolerance.CalcBestGroup(credG, s.Accounting.CredibilityThreshould)
-			nextpicks, err = s.Accounting.SelectValidationWorkersWithThreshold(0, credG, maxGroup, waitlist, unavailable)
+			if s.StepVoting && secondPicked == false {
+				nextpicks, err = s.Accounting.SelectValidationWorkersWithThreshold(1, credG, maxGroup, s.StepVoting, waitlist, unavailable)
+				secondPicked = true
+			} else {
+				nextpicks, err = s.Accounting.SelectValidationWorkersWithThreshold(0, credG, maxGroup, s.StepVoting, waitlist, unavailable)
+			}
 			if err != nil {
 				log2.Err.Printf("Failed to calc Next Workers %#v", err)
 				return results, nil, err
@@ -550,7 +606,7 @@ func (s *Service) Run() {
 									}
 								}
 							}
-							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%d] NODES_AVG[%f] LOSS_B[%d] LEFT_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, len(results), s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.StakeLeft, s.Accounting.GoodWorkersLoss, s.OnBridgeCount)
+							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%d] NODES_AVG[%f] LOSS_B[%d] LEFT_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d] AVG_REP[%f] VAR_REP[%f]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, len(results), s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.StakeLeft, s.Accounting.GoodWorkersLoss, s.OnBridgeCount, s.Accounting.AverageReputation, s.Accounting.VarianceReputation)
 						}
 						//結果を送信
 						if conclusion != nil && conclusion.IsRejected == false {
@@ -572,4 +628,8 @@ func (s *Service) Run() {
 
 func (s *Service) Stop() {
 	close(s.stopChan)
+	acc := s.Accounting
+	log2.Export.Printf("%d,%f,%f,%f,%t,%t,%d,%d,%f,%f,%f,%f,%d,%d", acc.GetWorkersCount(), acc.FaultyFraction, acc.CredibilityThreshould,
+		acc.ReputationResetRate, s.SetWatcher, s.StepVoting, s.WorksCount, s.FailedCount, float64(s.FailedCount)/float64(s.WorksCount),
+		s.NodesAvg, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss)
 }

@@ -11,6 +11,8 @@ var TestER *log.Logger
 var debugfile *os.File
 var errfile *os.File
 var testErrRatefile *os.File
+var Export *log.Logger
+var exportResult *os.File
 
 func init() {
 	file, err := os.OpenFile("log/debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
@@ -32,7 +34,12 @@ func init() {
 	} else {
 		TestER = log.New(testErrRatefile, "[TEST]", log.LstdFlags)
 	}
-
+	exportResult, err = os.OpenFile("log/expResult.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		Export = log.New(os.Stdout, "", 0)
+	} else {
+		Export = log.New(exportResult, "", 0)
+	}
 }
 
 func Close() {
@@ -44,5 +51,8 @@ func Close() {
 	}
 	if testErrRatefile != nil {
 		testErrRatefile.Close()
+	}
+	if exportResult != nil {
+		exportResult.Close()
 	}
 }

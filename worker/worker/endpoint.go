@@ -3,6 +3,8 @@ package worker
 import (
 	"context"
 	"errors"
+	"math/rand"
+	"time"
 	"yox2yox/antone/internal/log2"
 	"yox2yox/antone/pkg/stolerance"
 	"yox2yox/antone/worker/datapool"
@@ -48,12 +50,13 @@ func (e *Endpoint) GetValidatableCode(ctx context.Context, vCodeRequest *pb.Vali
 
 func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.ValidatableCode) (*pb.ValidationResult, error) {
 	log2.Debug.Printf("got bad reputations %#v", validatableCode.Badreputations)
+	log2.Debug.Printf("start working for validation Attack[%d] FirstNodeFault[%#v]", e.AttackMode, validatableCode.FirstNodeIsfault)
 
 	if e.AttackMode == 1 {
 		// Attack 1
 		creds := []float64{}
 		for _, rep := range validatableCode.Badreputations {
-			wcred := stolerance.CalcWorkerCred(0.4, int(rep))
+			wcred := stolerance.CalcWorkerCred(validatableCode.FaultyFraction, int(rep))
 			creds = append(creds, wcred)
 		}
 		results := [][]float64{creds}
@@ -67,7 +70,7 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 
 	if e.AttackMode == 2 {
 		// Attack 2 : 不正ワーカ数のみを利用
-		if e.BadMode && len(validatableCode.Badreputations) >= 5 {
+		if e.BadMode && len(validatableCode.Badreputations) >= 2 {
 			return &pb.ValidationResult{Pool: -1, Reject: false}, nil
 		}
 	}
@@ -77,7 +80,7 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 		if e.BadMode && len(validatableCode.Badreputations) >= 2 {
 			badThreshold := true
 			for _, rep := range validatableCode.Badreputations {
-				if stolerance.CalcWorkerCred(0.4, int(rep)) < float64(validatableCode.Threshould) {
+				if stolerance.CalcWorkerCred(validatableCode.FaultyFraction, int(rep)) < float64(validatableCode.Threshould) {
 					badThreshold = false
 				}
 			}
@@ -87,7 +90,43 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 		}
 	}
 
+	if e.AttackMode == 4 {
+		// Attack 4 : Credibilityおよび不正ワーカ数を利用For Step Voting
+		if e.BadMode {
+			stabotageRate := 1.0
+			if len(validatableCode.Badreputations) <= 1 {
+				if stolerance.CalcWorkerCred(validatableCode.FaultyFraction, int(validatableCode.Badreputations[0])) > float64(validatableCode.Threshould) {
+					log2.Debug.Printf("first bad node start calc satabotage")
+					rand.Seed(time.Now().UnixNano())
+					if rand.Float64() <= stabotageRate {
+						log2.Debug.Printf("first bad node try to sabotage")
+						return &pb.ValidationResult{Pool: -1, Reject: false}, nil
+					}
+				}
+			} else if validatableCode.FirstNodeIsfault {
+				log2.Debug.Printf("first node was fault")
+				isFist := true
+				groups := [][]float64{[]float64{}}
+				for _, rep := range validatableCode.Badreputations {
+					if isFist {
+						groups[0] = append(groups[0], stolerance.CalcWorkerCred(validatableCode.FaultyFraction, int(rep)))
+						isFist = false
+					} else {
+						groups[0] = append(groups[0], stolerance.CalcSecondaryWorkerCred(validatableCode.FaultyFraction, int(rep)))
+					}
+				}
+				gred := stolerance.CalcStepVotingGruopCred(0, groups)
+				log2.Debug.Printf("bad group is %#v", groups)
+				log2.Debug.Printf("bad group cred is %f", gred)
+				if gred >= float64(validatableCode.Threshould) {
+					log2.Debug.Printf("secondary worker sabotaged")
+					return &pb.ValidationResult{Pool: -1, Reject: false}, nil
+				}
+			}
+		}
+	}
+
 	pool := validatableCode.Data + validatableCode.Add
-	e.Reputation += 1
+	e.Reputation++
 	return &pb.ValidationResult{Pool: pool, Reject: false}, nil
 }

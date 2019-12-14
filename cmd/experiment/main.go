@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 	"yox2yox/antone/bridge"
 	"yox2yox/antone/bridge/config"
@@ -31,6 +32,7 @@ var (
 	resetRateOpt     = flag.Float64("reset", 0, "help message for \"reset\" option")
 	watcherOpt       = flag.Bool("watcher", false, "help message for \"watcher\" option")
 	blackListingOpt  = flag.Bool("blacklist", false, "help message for \"blacklist\" option")
+	stepVotingOpt    = flag.Bool("step", false, "help message for \"step\" option")
 )
 
 func main() {
@@ -42,6 +44,7 @@ func main() {
 	log2.Debug.Println("starting main function...")
 
 	errch := make(chan struct{})
+	var wg sync.WaitGroup
 
 	config, err := config.ReadBridgeConfig()
 	if err != nil {
@@ -75,21 +78,23 @@ func main() {
 	}
 
 	//ブリッジ起動
-	peer, err := bridge.New(config, false, *faultyFrationOpt, *credibilityOpt, *resetRateOpt, *watcherOpt, *blackListingOpt)
+	peerBridge, err := bridge.New(config, false, *faultyFrationOpt, *credibilityOpt, *resetRateOpt, *watcherOpt, *blackListingOpt, *stepVotingOpt)
 	if err != nil {
 		fmt.Printf("FATAL %s [] Failed to initialize peer", time.Now())
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() {
-		err = peer.Run(ctx)
+		wg.Add(1)
+		err = peerBridge.Run(ctx)
 		if err != nil {
 			fmt.Printf("FATAL %s [] Peer was killed %#v", time.Now(), err)
 		}
+		wg.Done()
 	}()
-	defer peer.Close()
 
 	//ワーカー起動
+	wPeers := []*worker.Peer{}
 	for i := 0; i < *numOpt; i++ {
 		workerConfig, err := wconfig.ReadWorkerConfig()
 		if err != nil {
@@ -120,13 +125,14 @@ func main() {
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		defer peer.Close()
+		wPeers = append(wPeers, peer)
 		go func() {
+			wg.Add(1)
 			err = peer.Run(ctx)
 			if err != nil {
 				log2.Err.Printf("peer was killed \n%#v\n", err)
 			}
-			close(errch)
+			wg.Done()
 		}()
 	}
 
@@ -191,7 +197,11 @@ func main() {
 	select {
 	case <-errch:
 		log2.Debug.Println("clossing peer...")
+		peerBridge.Close()
+		for _, p := range wPeers {
+			p.Close()
+		}
+		wg.Wait()
 		return
 	}
-
 }
