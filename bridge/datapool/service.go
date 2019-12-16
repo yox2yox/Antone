@@ -203,7 +203,7 @@ func (s *Service) AddHolders(datapoolid string, data int32, num int) ([]*account
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 
-				datapoolInfo := &workerpb.DatapoolContent{Id: datapoolid, Data: data}
+				datapoolInfo := &workerpb.DatapoolContent{Id: datapoolid, Data: data, Version: -1}
 				_, err = dpClient.CreateDatapool(ctx, datapoolInfo)
 				if err != nil {
 					log2.Err.Printf("failed to send CreateDatapool request to %s %#v\n", target.Addr, err)
@@ -239,7 +239,7 @@ func (s *Service) AddHolders(datapoolid string, data int32, num int) ([]*account
 	return holders, nil
 }
 
-func (s *Service) UpdateDatapoolRemote(datapoolid string, data int32) error {
+func (s *Service) UpdateDatapoolRemote(datapoolid string, version int, data int32) error {
 	log2.Debug.Println("start updating datapool on remote")
 	holders, err := s.GetDatapoolHolders(datapoolid)
 	if err != nil {
@@ -278,8 +278,9 @@ func (s *Service) UpdateDatapoolRemote(datapoolid string, data int32) error {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			datapoolUpdate := &workerpb.DatapoolContent{
-				Id:   datapoolid,
-				Data: int32(data),
+				Id:      datapoolid,
+				Data:    int32(data),
+				Version: int64(version),
 			}
 			log2.Debug.Printf("sending UpdateDatapool request to %s\n", target.Addr)
 			_, err = dpClient.UpdateDatapool(ctx, datapoolUpdate)

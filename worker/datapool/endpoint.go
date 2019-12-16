@@ -17,17 +17,17 @@ func NewEndpoint(service *Service) *Endpoint {
 
 //Datapoolを取得
 func (e *Endpoint) GetDatapool(ctx context.Context, datapoolId *pb.DatapoolId) (*pb.DatapoolContent, error) {
-	data, err := e.service.GetDataPool(datapoolId.Id)
+	data, ver, err := e.service.GetDataPool(datapoolId.Id)
 	if err != nil {
 		return nil, err
 	}
-	rtnpool := &pb.DatapoolContent{Id: datapoolId.Id, Data: data}
+	rtnpool := &pb.DatapoolContent{Id: datapoolId.Id, Data: data, Version: ver}
 	return rtnpool, nil
 }
 
 //Datapoolを更新
 func (e *Endpoint) UpdateDatapool(ctx context.Context, datapoolContent *pb.DatapoolContent) (*pb.UpdateResult, error) {
-	err := e.service.SetDataPool(datapoolContent.Id, datapoolContent.Data)
+	err := e.service.SetDataPool(datapoolContent.Id, datapoolContent.Data, datapoolContent.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (e *Endpoint) CreateDatapool(ctx context.Context, poolContent *pb.DatapoolC
 			return nil, err
 		}
 	}
-	_, err := e.service.GetDataPool(poolContent.Id)
+	_, _, err := e.service.GetDataPool(poolContent.Id)
 	if err != nil {
 		return nil, err
 	}

@@ -23,6 +23,7 @@ var (
 )
 
 type ValidationRequest struct {
+	RequestId       int
 	DatapoolId      string
 	Neednum         int
 	HolderId        string
@@ -39,8 +40,13 @@ type ValidationResult struct {
 
 type Service struct {
 	sync.RWMutex
+	WaitValidationsCount        int
 	ValidationRequests          []*ValidationRequest
-	WaitingRequestsId           []string
+	ValidatingRequests          map[int]*ValidationRequest
+	WaitingResults              map[int][]ValidationResult
+	WaitingConclusions          map[int]*ValidationResult
+	WaitingRequests             map[int]*ValidationRequest
+	WaitingTree                 []int
 	Accounting                  *accounting.Service
 	Datapool                    *datapool.Service
 	Running                     bool
@@ -49,19 +55,30 @@ type Service struct {
 	StepVoting                  bool
 	ErrCount                    int
 	FailedCount                 int
+	CrossFailCount              int
 	SuccessCount                int
 	RejectedCount               int
 	WorksCount                  int
+	LocalWorksCount             int
 	OnBridgeCount               int
 	NodesAvg                    float64
 	NodesSum                    int
 	SetWatcher                  bool
+	SkipValidation              bool
+	LatestData                  int32
+	LatestVersion               int64
+	NextRequestId               int
 	stopChan                    chan struct{}
 }
 
-func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool) *Service {
+func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool, skipValidation bool) *Service {
 	return &Service{
+		WaitingTree:                 []int{},
 		ValidationRequests:          []*ValidationRequest{},
+		WaitingResults:              map[int][]ValidationResult{},
+		WaitingConclusions:          map[int]*ValidationResult{},
+		WaitingRequests:             map[int]*ValidationRequest{},
+		ValidatingRequests:          map[int]*ValidationRequest{},
 		Accounting:                  accounting,
 		Datapool:                    datapool,
 		Running:                     false,
@@ -72,26 +89,18 @@ func NewService(accounting *accounting.Service, datapool *datapool.Service, with
 		FailedCount:                 0,
 		RejectedCount:               0,
 		OnBridgeCount:               0,
+		LocalWorksCount:             0,
+		LatestData:                  0,
+		NextRequestId:               0,
 		SetWatcher:                  setWatcher,
 		StepVoting:                  stepVoting,
+		SkipValidation:              skipValidation,
 		stopChan:                    make(chan struct{}),
 	}
 }
 
-func (s *Service) IsTheDatapoolAvailable(datapoolId string) bool {
-	s.RLock()
-	available := true
-	for _, id := range s.WaitingRequestsId {
-		if id == datapoolId {
-			available = false
-		}
-	}
-	s.RUnlock()
-	return available
-}
-
 func (s *Service) getWaitingValidationRequestsCount() int {
-	return len(s.ValidationRequests)
+	return len(s.WaitingTree)
 }
 
 func (s *Service) getValidatableCodeRemote(holder accounting.Worker, datapoolId string, add int32) (*pb.ValidatableCode, error) {
@@ -108,24 +117,34 @@ func (s *Service) getValidatableCodeRemote(holder accounting.Worker, datapoolId 
 	if vcode == nil {
 		return nil, ErrGottenDataIsNil
 	}
-	vcodeout := &pb.ValidatableCode{Data: vcode.Data, Add: vcode.Add}
+	vcodeout := &pb.ValidatableCode{Data: vcode.Data, Add: vcode.Add, Version: vcode.Version}
 	return vcodeout, nil
 
 }
 
 //ValidatableCodeを取得する
-func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add int32) (*pb.ValidatableCode, string, error) {
-	//データプールが利用可能になるまで無限ループ
-	for s.IsTheDatapoolAvailable(datapoolId) == false {
-		select {
-		case <-ctx.Done():
-			return nil, "", nil
-		default:
+func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add int32) (*pb.ValidatableCode, string, int, error) {
+
+	if s.SkipValidation == false {
+		//データプールが利用可能になるまで無限ループ
+		for s.getWaitingValidationRequestsCount() > 0 {
+			log2.Debug.Printf("Waiting List %d", s.getWaitingValidationRequestsCount())
+			select {
+			case <-ctx.Done():
+				return nil, "", -1, nil
+			default:
+			}
 		}
 	}
+	s.Lock()
+	myRequestID := s.NextRequestId
+	s.WaitingTree = append(s.WaitingTree, myRequestID)
+	s.NextRequestId++
+	s.Unlock()
+
 	holder, err := s.Datapool.SelectDataPoolHolder(datapoolId, []string{})
 	if err != nil {
-		return nil, "", err
+		return nil, "", -1, err
 	}
 	var vcode *pb.ValidatableCode = nil
 	if s.WithoutConnectRemoteForTest {
@@ -133,16 +152,31 @@ func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add
 			Data: 0,
 			Add:  add,
 		}
+		return vcode, holder.Id, myRequestID, nil
 	} else {
 		vcode, err = s.getValidatableCodeRemote(*holder, datapoolId, add)
 		if err != nil {
-			return nil, holder.Id, err
+			return nil, holder.Id, myRequestID, err
 		}
-	}
-	if vcode == nil {
-		return nil, holder.Id, ErrGottenDataIsNil
-	} else {
-		return vcode, holder.Id, nil
+		if vcode == nil {
+			return nil, holder.Id, myRequestID, ErrGottenDataIsNil
+		} else if s.SkipValidation {
+			data := vcode.Data
+			log2.Debug.Printf("Data is %d version[%d]", data, vcode.Version)
+			for reqID := vcode.Version + 1; reqID < int64(myRequestID); reqID++ {
+				log2.Debug.Printf("Request %d detected", reqID)
+				if reqID < int64(myRequestID) && reqID > vcode.Version {
+					data++
+					log2.Debug.Printf("data was incremented %d", data)
+					s.LocalWorksCount++
+				}
+			}
+			log2.Debug.Printf("request[%d] vcode is %d + 1", myRequestID, data)
+			vcode = &pb.ValidatableCode{Data: data, Add: add}
+			return vcode, "", myRequestID, nil
+		} else {
+			return vcode, holder.Id, myRequestID, nil
+		}
 	}
 }
 
@@ -183,33 +217,98 @@ func (s *Service) dequeueValidationRequest() *ValidationRequest {
 	return tmp
 }
 
-func (s *Service) AddValidationRequest(datapoolId string, needNum int, holderId string, vcode *pb.ValidatableCode) {
+func (s *Service) AddValidationRequest(requestID int, datapoolId string, needNum int, holderId string, vcode *pb.ValidatableCode) {
 	fmt.Printf("DEBUG %s [] A ValidationRequest is added to orders.service\n", time.Now().String())
-	vreq := &ValidationRequest{DatapoolId: datapoolId, Neednum: needNum, HolderId: holderId, ValidatableCode: vcode}
+	vreq := &ValidationRequest{DatapoolId: datapoolId, Neednum: needNum, HolderId: holderId, ValidatableCode: vcode, RequestId: requestID}
 	s.Lock()
 	s.ValidationRequests = append(s.ValidationRequests, vreq)
 	s.Unlock()
+	s.addRequestToTree(vreq)
 	fmt.Printf("DEBUG %s [] Waiting ValidationRequests count is %d\n", time.Now().String(), len(s.ValidationRequests))
 }
 
-//waitlistに追加
-func (s *Service) addWaitingList(userId string) {
+func (s *Service) getAncestorsFromTree(id int) []*ValidationRequest {
+	output := []*ValidationRequest{}
+	for _, reqID := range s.WaitingTree {
+		if req, exist := s.WaitingRequests[reqID]; exist && reqID < id {
+			output = append(output, req)
+		}
+	}
+	return output
+}
+
+func (s *Service) deleteRequestFromTree(id int) {
+
+	count := len(s.WaitingTree)
+
+	if count <= 0 {
+		return
+	}
 	s.Lock()
-	s.WaitingRequestsId = append(s.WaitingRequestsId, userId)
+	newTree := []int{}
+	for _, reqID := range s.WaitingTree {
+		if reqID != id {
+			newTree = append(newTree, reqID)
+		}
+	}
+	s.WaitingTree = newTree
+	if _, exist := s.WaitingResults[id]; exist {
+		delete(s.WaitingResults, id)
+	}
+	if _, exist := s.WaitingConclusions[id]; exist {
+		delete(s.WaitingConclusions, id)
+	}
+	if _, exist := s.ValidatingRequests[id]; exist {
+		delete(s.ValidatingRequests, id)
+	}
+	s.Unlock()
+
+}
+
+func (s *Service) addRequestToTree(vreq *ValidationRequest) {
+	s.Lock()
+	s.WaitingRequests[vreq.RequestId] = vreq
 	s.Unlock()
 }
 
-//waitlistから削除
-func (s *Service) removeWaitingList(userId string) {
-	newlist := []string{}
+func (s *Service) commitConclusionToTree(id int, results []ValidationResult, conclusion *ValidationResult) {
 	s.Lock()
-	for _, waitId := range s.WaitingRequestsId {
-		if waitId != userId {
-			newlist = append(newlist, waitId)
+	s.WaitingResults[id] = results
+	s.WaitingConclusions[id] = conclusion
+	s.Unlock()
+	log2.Debug.Printf("waiting tree is %#v", s.WaitingTree)
+	concludedIDs := []int{}
+	wResults := map[int][]ValidationResult{}
+	wConclusions := map[int]*ValidationResult{}
+	wRequests := map[int]*ValidationRequest{}
+
+	//s.WaitListMutex.Lock()
+	for _, id := range s.WaitingTree {
+		res, exist := s.WaitingResults[id]
+		conc, existConc := s.WaitingConclusions[id]
+		req, existReq := s.WaitingRequests[id]
+		if exist && existReq && existConc {
+			wResults[id] = results
+			wConclusions[id] = conc
+			wRequests[id] = req
+			concludedIDs = append(concludedIDs, id)
+			s.deleteRequestFromTree(id)
+			s.commitConclustion(req, res, conc)
+		} else {
+			break
 		}
 	}
-	s.WaitingRequestsId = newlist
-	s.Unlock()
+	//s.WaitListMutex.Unlock()
+	/*for _, id := range concludedIDs {
+		res, exist := s.WaitingResults[id]
+		conc, existConc := s.WaitingConclusions[id]
+		req, existReq := s.WaitingRequests[id]
+		if exist && existReq && existConc {
+			s.commitConclustion(req, res, conc)
+		} else {
+			break
+		}
+	}*/
 }
 
 //結果リストから、必要な追加ワーカ数および最も多数だった結果を返す
@@ -297,9 +396,39 @@ func (s *Service) removeWaitingList(userId string) {
 
 }*/
 
+func (s *Service) commitConclustion(vreq *ValidationRequest, results []ValidationResult, conclusion *ValidationResult) {
+	validateByBridge := false
+	if s.DoesValidationNeed(results, *conclusion) && s.SetWatcher {
+		conclusion = s.ValidateOnBridge(*vreq.ValidatableCode)
+		s.OnBridgeCount++
+		validateByBridge = true
+	} else if s.SkipValidation {
+		conclusion = s.ValidateOnBridge(*vreq.ValidatableCode)
+		if s.DoesValidationNeed(results, *conclusion) {
+			s.OnBridgeCount++
+			validateByBridge = true
+		}
+	}
+	//結果から評価値を登録
+	fmt.Printf("INFO %s [] END - Validations by remote workers", time.Now())
+	s.commitReputation(vreq.HolderId, results, conclusion, validateByBridge)
+
+	//結果を送信
+	if conclusion != nil && conclusion.IsRejected == false {
+		res := s.ValidateOnBridge(*vreq.ValidatableCode)
+		if res.Data != conclusion.Data {
+			s.CrossFailCount++
+		}
+		s.Datapool.UpdateDatapoolRemote(vreq.DatapoolId, vreq.RequestId, conclusion.Data)
+	}
+}
+
 //バリデーション結果に基づいて評価値を登録する
 func (s *Service) commitReputation(holderId string, results []ValidationResult, conclusion *ValidationResult, validateByBridge bool) {
 	if conclusion != nil {
+		if conclusion.IsRejected == false && conclusion.IsError == false {
+			s.LatestData = conclusion.Data
+		}
 		//データホルダーの評価値を登録
 		/*if conclusion.IsRejected == true {
 			s.Accounting.UpdateReputation(holderId, false, validateByBridge)
@@ -538,88 +667,59 @@ func (s *Service) Run() {
 			fmt.Printf("INFO %s [] OrdersServer has been stoped\n", time.Now())
 			return
 		default:
-			if len(s.ValidationRequests) > 0 {
-				//利用可能なリクエストが出てくるまでループ
-				waitingvreq := []*ValidationRequest{}
-				available := false
-				var vreq *ValidationRequest = nil
-				for available == false {
-					vreq = s.dequeueValidationRequest()
-					if vreq == nil {
-						break
-					}
-					available = s.IsTheDatapoolAvailable(vreq.DatapoolId)
-					if available == false {
-						waitingvreq = append(waitingvreq, vreq)
-					}
-				}
-
-				if vreq != nil && available == true {
+			if len(s.ValidationRequests) > 0 && (len(s.ValidatingRequests) == 0 || s.SkipValidation) {
+				vreq := s.dequeueValidationRequest()
+				s.ValidatingRequests[vreq.RequestId] = vreq
+				if vreq != nil {
 					log2.Debug.Printf("Got order to validate")
-					//WaitingListに追加
-					s.addWaitingList(vreq.DatapoolId)
 					go func() {
 						ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 						defer cancel()
+						s.Lock()
+						s.WaitValidationsCount++
+						s.Unlock()
 						results, conclusion, err := s.ValidateCode(ctx, vreq.Neednum, vreq.HolderId, vreq.ValidatableCode)
-
+						if s.LatestVersion < int64(vreq.RequestId) {
+							if conclusion != nil {
+								s.LatestData = conclusion.Data //segmentaion
+							}
+							s.LatestVersion = int64(vreq.RequestId)
+						}
 						if err != nil {
 							log2.Err.Printf("failed to validation %#v", err)
 						} else if results != nil {
-							validateByBridge := false
-							if s.DoesValidationNeed(results, *conclusion) && s.SetWatcher {
-								conclusion = s.ValidateOnBridge(*vreq.ValidatableCode)
-								s.OnBridgeCount++
-								validateByBridge = true
-							} /* else if s.SetWatcher {
-								conclusion = s.ValidateOnBridge(*vreq.ValidatableCode)
-								if s.DoesValidationNeed(results, *conclusion) {
-									s.OnBridgeCount++
-									validateByBridge = true
-								}
-							}*/
-							//結果から評価値を登録
-							fmt.Printf("INFO %s [] END - Validations by remote workers", time.Now())
-							s.commitReputation(vreq.HolderId, results, conclusion, validateByBridge)
+							s.commitConclusionToTree(vreq.RequestId, results, conclusion)
 						}
 
 						//CalcERモードの時、結果をログに出力
 						if s.CalcER {
-							s.WorksCount += 1
+							s.WorksCount++
 							if results == nil || conclusion == nil {
 								s.Lock()
-								s.ErrCount += 1
+								s.ErrCount++
 								s.Unlock()
 							} else {
 								s.NodesSum += len(results)
 								s.NodesAvg = float64(s.NodesSum) / float64(s.WorksCount)
 								if conclusion.IsRejected {
-									s.RejectedCount += 1
+									s.RejectedCount++
 								} else if conclusion.IsError {
-									s.ErrCount += 1
+									s.ErrCount++
 								} else {
 									want := vreq.ValidatableCode.Data + vreq.ValidatableCode.Add
 									if want == conclusion.Data {
-										s.SuccessCount += 1
+										s.SuccessCount++
 									} else {
-										s.FailedCount += 1
+										s.FailedCount++
 									}
 								}
 							}
-							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%d] NODES_AVG[%f] LOSS_B[%d] LEFT_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d] AVG_REP[%f] VAR_REP[%f]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, len(results), s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.StakeLeft, s.Accounting.GoodWorkersLoss, s.OnBridgeCount, s.Accounting.AverageReputation, s.Accounting.VarianceReputation)
+							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%d] NODES_AVG[%f] LOSS_B[%d] LEFT_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d] AVG_REP[%f] VAR_REP[%f] Data[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, len(results), s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.StakeLeft, s.Accounting.GoodWorkersLoss, s.OnBridgeCount, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, s.LatestData)
+							s.Lock()
+							s.WaitValidationsCount--
+							s.Unlock()
 						}
-						//結果を送信
-						if conclusion != nil && conclusion.IsRejected == false {
-							s.Datapool.UpdateDatapoolRemote(vreq.DatapoolId, conclusion.Data)
-						}
-						//WaingListから削除
-						s.removeWaitingList(vreq.DatapoolId)
 					}()
-				} else {
-					//取り出したリクエストを待ち行列に戻す
-					s.Lock()
-					s.ValidationRequests = append(waitingvreq, s.ValidationRequests...)
-					s.Unlock()
 				}
 			}
 		}
@@ -629,7 +729,7 @@ func (s *Service) Run() {
 func (s *Service) Stop() {
 	close(s.stopChan)
 	acc := s.Accounting
-	log2.Export.Printf("%d,%f,%f,%f,%t,%t,%d,%d,%f,%f,%f,%f,%d,%d", acc.GetWorkersCount(), acc.FaultyFraction, acc.CredibilityThreshould,
+	log2.Export.Printf("%d,%f,%f,%f,%t,%t,%d,%d,%f,%f,%f,%f,%d,%d,%d,%d", acc.GetWorkersCount(), acc.FaultyFraction, acc.CredibilityThreshould,
 		acc.ReputationResetRate, s.SetWatcher, s.StepVoting, s.WorksCount, s.FailedCount, float64(s.FailedCount)/float64(s.WorksCount),
-		s.NodesAvg, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss)
+		s.NodesAvg, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss, s.LatestData, s.CrossFailCount)
 }

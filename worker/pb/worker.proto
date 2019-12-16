@@ -23,7 +23,8 @@ message ValidatableCode {
   float resetrate = 5;
   bool firstNodeIsfault = 6;
   double faultyFraction = 7;
-  repeated int32 badreputations = 8; //不正ノードの予想評価値
+  int64 version = 8;
+  repeated int32 badreputations = 9; //不正ノードの予想評価値
 }
 
 message ValidationResult {

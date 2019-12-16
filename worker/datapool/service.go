@@ -8,6 +8,7 @@ import (
 type Service struct {
 	sync.RWMutex
 	dataPool map[string]*int32
+	versoin  int64
 }
 
 var (
@@ -32,6 +33,7 @@ func (s *Service) CreateDataPool(id string, data int32) error {
 	var pool int32 = data
 	s.Lock()
 	s.dataPool[id] = &pool
+	s.versoin = -1
 	s.Unlock()
 	return nil
 }
@@ -51,24 +53,26 @@ func (s *Service) DeleteDataPool(id string) error {
 }
 
 //idに結びついたdatapoolを取得
-func (s *Service) GetDataPool(id string) (int32, error) {
+func (s *Service) GetDataPool(id string) (int32, int64, error) {
 	if !s.ExistDataPool(id) {
-		return -1, ErrDataPoolNotExist
+		return -1, -1, ErrDataPoolNotExist
 	} else {
 		s.RLock()
 		data := *s.dataPool[id]
+		ver := s.versoin
 		s.RUnlock()
-		return data, nil
+		return data, ver, nil
 	}
 }
 
 //idに結びついたデータプールにデータを登録
-func (s *Service) SetDataPool(id string, data int32) error {
+func (s *Service) SetDataPool(id string, data int32, version int64) error {
 	if !s.ExistDataPool(id) {
 		return ErrDataPoolNotExist
 	}
 	s.Lock()
 	s.dataPool[id] = &data
+	s.versoin = version
 	s.Unlock()
 	return nil
 }

@@ -20,19 +20,20 @@ import (
 )
 
 var (
-	addrOpt          = flag.String("a", "", "help message for \"a\" option")
-	attackModeOpt    = flag.Int("attack", 0, "help message for \"attack\" option")
-	validatorsNumOpt = flag.Int("validators", 1, "help message for \"validators\" option")
-	portOpt          = flag.Int("port", -1, "help message for \"port\" option")
-	numOpt           = flag.Int("num", 1, "help message for \"port\" option")
-	badnumOpt        = flag.Int("bad", 0, "help message for \"bad\" option")
-	requestsCountOpt = flag.Int("req", 1, "help message for \"port\" option")
-	faultyFrationOpt = flag.Float64("fault", 0.4, "help message for \"fault\" option")
-	credibilityOpt   = flag.Float64("cred", 0.9, "help message for \"cred\" option")
-	resetRateOpt     = flag.Float64("reset", 0, "help message for \"reset\" option")
-	watcherOpt       = flag.Bool("watcher", false, "help message for \"watcher\" option")
-	blackListingOpt  = flag.Bool("blacklist", false, "help message for \"blacklist\" option")
-	stepVotingOpt    = flag.Bool("step", false, "help message for \"step\" option")
+	addrOpt           = flag.String("a", "", "help message for \"a\" option")
+	attackModeOpt     = flag.Int("attack", 0, "help message for \"attack\" option")
+	validatorsNumOpt  = flag.Int("validators", 1, "help message for \"validators\" option")
+	portOpt           = flag.Int("port", -1, "help message for \"port\" option")
+	numOpt            = flag.Int("num", 1, "help message for \"port\" option")
+	badnumOpt         = flag.Int("bad", 0, "help message for \"bad\" option")
+	requestsCountOpt  = flag.Int("req", 1, "help message for \"port\" option")
+	faultyFrationOpt  = flag.Float64("fault", 0.4, "help message for \"fault\" option")
+	credibilityOpt    = flag.Float64("cred", 0.9, "help message for \"cred\" option")
+	resetRateOpt      = flag.Float64("reset", 0, "help message for \"reset\" option")
+	watcherOpt        = flag.Bool("watcher", false, "help message for \"watcher\" option")
+	blackListingOpt   = flag.Bool("blacklist", false, "help message for \"blacklist\" option")
+	stepVotingOpt     = flag.Bool("step", false, "help message for \"step\" option")
+	skipValidationOpt = flag.Bool("skip", false, "help message for \"skip\" option")
 )
 
 func main() {
@@ -78,7 +79,7 @@ func main() {
 	}
 
 	//ブリッジ起動
-	peerBridge, err := bridge.New(config, false, *faultyFrationOpt, *credibilityOpt, *resetRateOpt, *watcherOpt, *blackListingOpt, *stepVotingOpt)
+	peerBridge, err := bridge.New(config, false, *faultyFrationOpt, *credibilityOpt, *resetRateOpt, *watcherOpt, *blackListingOpt, *stepVotingOpt, *skipValidationOpt)
 	if err != nil {
 		fmt.Printf("FATAL %s [] Failed to initialize peer", time.Now())
 	}
@@ -168,7 +169,11 @@ func main() {
 		for i := 0; i < requestsCount; i++ {
 			ctxOrder, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 			defer cancel()
-			req := &bpb.ValidatableCodeRequest{Datapoolid: myDatapool.Datapoolid, Add: 1}
+			waitForValidation := false
+			if *skipValidationOpt || i == requestsCount-1 {
+				waitForValidation = true
+			}
+			req := &bpb.ValidatableCodeRequest{Datapoolid: myDatapool.Datapoolid, Add: 1, WaitForValidation: waitForValidation}
 			clientOrder.RequestValidatableCode(ctxOrder, req)
 		}
 		close(errch)

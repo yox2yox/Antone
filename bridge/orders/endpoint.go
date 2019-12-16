@@ -42,17 +42,18 @@ func (e *Endpoint) RequestValidatableCode(ctx context.Context, vCodeRequest *pb.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	//ValidatableCode取得
-	vcode, holderId, err := e.Orders.GetValidatableCode(ctx, vCodeRequest.Datapoolid, vCodeRequest.Add)
+	vcode, holderId, reqId, err := e.Orders.GetValidatableCode(ctx, vCodeRequest.Datapoolid, vCodeRequest.Add)
 	if err != nil {
 		log2.Err.Printf("failed to get validatable code %#v", err)
 		return nil, err
 	}
-
-	e.Orders.AddValidationRequest(vCodeRequest.Datapoolid, e.Config.NeedValidationNum, holderId, vcode)
 	log2.Debug.Printf("success to get validatable code %#v", vcode)
 
+	e.Orders.AddValidationRequest(reqId, vCodeRequest.Datapoolid, e.Config.NeedValidationNum, holderId, vcode)
+	log2.Debug.Printf("success to add validatable code %#v", vcode)
+
 	//Wait For Validation
-	for e.Orders.getWaitingValidationRequestsCount() > 0 {
+	for vCodeRequest.WaitForValidation && e.Orders.WaitValidationsCount > 0 {
 		log2.Debug.Printf("waiting validation...[Waiting:%d]", e.Orders.getWaitingValidationRequestsCount())
 	}
 	return vcode, nil
