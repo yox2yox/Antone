@@ -53,8 +53,8 @@ func (e *Endpoint) RequestValidatableCode(ctx context.Context, vCodeRequest *pb.
 	log2.Debug.Printf("success to add validatable code %#v", vcode)
 
 	//Wait For Validation
-	for vCodeRequest.WaitForValidation && e.Orders.WaitValidationsCount > 0 {
-		log2.Debug.Printf("waiting validation...[Waiting:%d]", e.Orders.getWaitingValidationRequestsCount())
+	for vCodeRequest.WaitForValidation && e.Orders.GetWaitingTreeCount() > 0 {
+		log2.Debug.Printf("waiting validation...[Waiting:%d]", e.Orders.GetWaitingTreeCount())
 	}
 	return vcode, nil
 

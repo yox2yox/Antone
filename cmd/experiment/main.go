@@ -46,6 +46,7 @@ func main() {
 
 	errch := make(chan struct{})
 	var wg sync.WaitGroup
+	var wgBridge sync.WaitGroup
 
 	config, err := config.ReadBridgeConfig()
 	if err != nil {
@@ -86,12 +87,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() {
-		wg.Add(1)
+		wgBridge.Add(1)
 		err = peerBridge.Run(ctx)
 		if err != nil {
 			fmt.Printf("FATAL %s [] Peer was killed %#v", time.Now(), err)
 		}
-		wg.Done()
+		wgBridge.Done()
 	}()
 
 	//ワーカー起動
@@ -203,6 +204,7 @@ func main() {
 	case <-errch:
 		log2.Debug.Println("clossing peer...")
 		peerBridge.Close()
+		wgBridge.Wait()
 		for _, p := range wPeers {
 			p.Close()
 		}

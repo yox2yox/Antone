@@ -40,12 +40,11 @@ type ValidationResult struct {
 
 type Service struct {
 	sync.RWMutex
-	WaitValidationsCount        int
-	ValidationRequests          []*ValidationRequest
-	ValidatingRequests          map[int]*ValidationRequest
-	WaitingResults              map[int][]ValidationResult
-	WaitingConclusions          map[int]*ValidationResult
-	WaitingRequests             map[int]*ValidationRequest
+	NowValidating               *ValidationRequest
+	RequestsBeforeValidation    []*ValidationRequest
+	ResultsBeforeCommit         map[int][]ValidationResult
+	ConclusionsBeforeCommit     map[int]*ValidationResult
+	RequestsBeforeCommit        map[int]*ValidationRequest
 	WaitingTree                 []int
 	Accounting                  *accounting.Service
 	Datapool                    *datapool.Service
@@ -74,11 +73,11 @@ type Service struct {
 func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool, skipValidation bool) *Service {
 	return &Service{
 		WaitingTree:                 []int{},
-		ValidationRequests:          []*ValidationRequest{},
-		WaitingResults:              map[int][]ValidationResult{},
-		WaitingConclusions:          map[int]*ValidationResult{},
-		WaitingRequests:             map[int]*ValidationRequest{},
-		ValidatingRequests:          map[int]*ValidationRequest{},
+		NowValidating:               nil,
+		RequestsBeforeValidation:    []*ValidationRequest{},
+		ResultsBeforeCommit:         map[int][]ValidationResult{},
+		ConclusionsBeforeCommit:     map[int]*ValidationResult{},
+		RequestsBeforeCommit:        map[int]*ValidationRequest{},
 		Accounting:                  accounting,
 		Datapool:                    datapool,
 		Running:                     false,
@@ -99,7 +98,7 @@ func NewService(accounting *accounting.Service, datapool *datapool.Service, with
 	}
 }
 
-func (s *Service) getWaitingValidationRequestsCount() int {
+func (s *Service) GetWaitingTreeCount() int {
 	return len(s.WaitingTree)
 }
 
@@ -127,8 +126,8 @@ func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add
 
 	if s.SkipValidation == false {
 		//データプールが利用可能になるまで無限ループ
-		for s.getWaitingValidationRequestsCount() > 0 {
-			log2.Debug.Printf("Waiting List %d", s.getWaitingValidationRequestsCount())
+		for s.GetWaitingTreeCount() > 0 {
+			log2.Debug.Printf("Waiting List %d", s.GetWaitingTreeCount())
 			select {
 			case <-ctx.Done():
 				return nil, "", -1, nil
@@ -175,6 +174,7 @@ func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add
 			vcode = &pb.ValidatableCode{Data: data, Add: add}
 			return vcode, "", myRequestID, nil
 		} else {
+			log2.Debug.Printf("request[%d] vcode is %d + 1", myRequestID, vcode.Data)
 			return vcode, holder.Id, myRequestID, nil
 		}
 	}
@@ -201,17 +201,17 @@ func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.Valida
 
 func (s *Service) dequeueValidationRequest() *ValidationRequest {
 	s.RLock()
-	count := len(s.ValidationRequests)
+	count := len(s.RequestsBeforeValidation)
 	s.RUnlock()
 	if count <= 0 {
 		return nil
 	}
 	s.Lock()
-	tmp := s.ValidationRequests[0]
-	if len(s.ValidationRequests) > 1 {
-		s.ValidationRequests = s.ValidationRequests[1:]
+	tmp := s.RequestsBeforeValidation[0]
+	if len(s.RequestsBeforeValidation) > 1 {
+		s.RequestsBeforeValidation = s.RequestsBeforeValidation[1:]
 	} else {
-		s.ValidationRequests = []*ValidationRequest{}
+		s.RequestsBeforeValidation = []*ValidationRequest{}
 	}
 	s.Unlock()
 	return tmp
@@ -221,16 +221,16 @@ func (s *Service) AddValidationRequest(requestID int, datapoolId string, needNum
 	fmt.Printf("DEBUG %s [] A ValidationRequest is added to orders.service\n", time.Now().String())
 	vreq := &ValidationRequest{DatapoolId: datapoolId, Neednum: needNum, HolderId: holderId, ValidatableCode: vcode, RequestId: requestID}
 	s.Lock()
-	s.ValidationRequests = append(s.ValidationRequests, vreq)
+	s.RequestsBeforeValidation = append(s.RequestsBeforeValidation, vreq)
 	s.Unlock()
 	s.addRequestToTree(vreq)
-	fmt.Printf("DEBUG %s [] Waiting ValidationRequests count is %d\n", time.Now().String(), len(s.ValidationRequests))
+	fmt.Printf("DEBUG %s [] Waiting RequestsBeforeValidation count is %d\n", time.Now().String(), len(s.RequestsBeforeValidation))
 }
 
 func (s *Service) getAncestorsFromTree(id int) []*ValidationRequest {
 	output := []*ValidationRequest{}
 	for _, reqID := range s.WaitingTree {
-		if req, exist := s.WaitingRequests[reqID]; exist && reqID < id {
+		if req, exist := s.RequestsBeforeCommit[reqID]; exist && reqID < id {
 			output = append(output, req)
 		}
 	}
@@ -252,14 +252,11 @@ func (s *Service) deleteRequestFromTree(id int) {
 		}
 	}
 	s.WaitingTree = newTree
-	if _, exist := s.WaitingResults[id]; exist {
-		delete(s.WaitingResults, id)
+	if _, exist := s.ResultsBeforeCommit[id]; exist {
+		delete(s.ResultsBeforeCommit, id)
 	}
-	if _, exist := s.WaitingConclusions[id]; exist {
-		delete(s.WaitingConclusions, id)
-	}
-	if _, exist := s.ValidatingRequests[id]; exist {
-		delete(s.ValidatingRequests, id)
+	if _, exist := s.ConclusionsBeforeCommit[id]; exist {
+		delete(s.ConclusionsBeforeCommit, id)
 	}
 	s.Unlock()
 
@@ -267,14 +264,14 @@ func (s *Service) deleteRequestFromTree(id int) {
 
 func (s *Service) addRequestToTree(vreq *ValidationRequest) {
 	s.Lock()
-	s.WaitingRequests[vreq.RequestId] = vreq
+	s.RequestsBeforeCommit[vreq.RequestId] = vreq
 	s.Unlock()
 }
 
 func (s *Service) commitConclusionToTree(id int, results []ValidationResult, conclusion *ValidationResult) {
 	s.Lock()
-	s.WaitingResults[id] = results
-	s.WaitingConclusions[id] = conclusion
+	s.ResultsBeforeCommit[id] = results
+	s.ConclusionsBeforeCommit[id] = conclusion
 	s.Unlock()
 	log2.Debug.Printf("waiting tree is %#v", s.WaitingTree)
 	concludedIDs := []int{}
@@ -282,119 +279,22 @@ func (s *Service) commitConclusionToTree(id int, results []ValidationResult, con
 	wConclusions := map[int]*ValidationResult{}
 	wRequests := map[int]*ValidationRequest{}
 
-	//s.WaitListMutex.Lock()
 	for _, id := range s.WaitingTree {
-		res, exist := s.WaitingResults[id]
-		conc, existConc := s.WaitingConclusions[id]
-		req, existReq := s.WaitingRequests[id]
+		res, exist := s.ResultsBeforeCommit[id]
+		conc, existConc := s.ConclusionsBeforeCommit[id]
+		req, existReq := s.RequestsBeforeCommit[id]
 		if exist && existReq && existConc {
 			wResults[id] = results
 			wConclusions[id] = conc
 			wRequests[id] = req
 			concludedIDs = append(concludedIDs, id)
+			s.commitConclustion(req, res, conc)
 			s.deleteRequestFromTree(id)
-			s.commitConclustion(req, res, conc)
 		} else {
 			break
 		}
 	}
-	//s.WaitListMutex.Unlock()
-	/*for _, id := range concludedIDs {
-		res, exist := s.WaitingResults[id]
-		conc, existConc := s.WaitingConclusions[id]
-		req, existReq := s.WaitingRequests[id]
-		if exist && existReq && existConc {
-			s.commitConclustion(req, res, conc)
-		} else {
-			break
-		}
-	}*/
 }
-
-//結果リストから、必要な追加ワーカ数および最も多数だった結果を返す
-/*func (s *Service) calcNeedAdditionalWorkerAndResult(picknum int, results []ValidationResult) (int, ValidationResult) {
-
-	log2.Debug.Printf("start to calculate conclusion%#v", results)
-
-	resultmap := map[int32][]float64{}
-	rejected := []float64{}
-	for _, res := range results {
-		worker, err := s.Accounting.GetWorker(res.WorkerId)
-		if err == nil {
-			if res.IsRejected {
-				cred := stolerance.CalcWorkerCred()
-				rejected = append(rejected, worker.Credibility)
-				log2.Debug.Printf("calc is rejected by %s", worker.Id)
-			} else if !res.IsError {
-				log2.Debug.Printf("result is %d", res.Data)
-				_, exist := resultmap[res.Data]
-				if exist {
-					resultmap[res.Data] = append(resultmap[res.Data], worker.Credibility)
-				} else {
-					resultmap[res.Data] = []float64{worker.Credibility}
-				}
-			} else {
-				log2.Debug.Printf("result is error")
-			}
-		} else {
-			log2.Debug.Printf("failed to get worker account %s %#v", res.WorkerId, err)
-		}
-	}
-
-	resultData := []int32{}
-	credsGroups := [][]float64{}
-	for data, res := range resultmap {
-		credsGroups = append(credsGroups, res)
-		resultData = append(resultData, data)
-	}
-	if len(rejected) > 0 {
-		credsGroups = append(credsGroups, rejected)
-	}
-	var count int
-	var group int
-
-	if len(resultData) >= 2 {
-		count = 0
-		group = 0
-	} else {
-		count, group = stolerance.CalcNeedWorkerCountAndBestGroup(s.Accounting.AverageCredibility, credsGroups, s.Accounting.CredibilityThreshould)
-	}
-	if count < 0 || group < 0 {
-		return -1, ValidationResult{}
-	} else {
-		var valResult ValidationResult
-		alreadyGetCount := 0
-		if group >= len(resultData) {
-			valResult = ValidationResult{
-				IsRejected: true,
-				IsError:    false,
-				Data:       0,
-			}
-			alreadyGetCount = len(rejected)
-		} else {
-			valResult = ValidationResult{
-				IsRejected: false,
-				IsError:    false,
-				Data:       resultData[group],
-			}
-			alreadyGetCount = len(resultmap[resultData[group]])
-		}
-
-		half := s.Accounting.GetWorkersCount()/2 + 1
-		log2.Debug.Printf("half of workers is %d", half)
-		needhalf := half - alreadyGetCount
-		if needhalf < 0 {
-			needhalf = 0
-		}
-		if count > needhalf {
-			count = needhalf
-		}
-
-		return count, valResult
-
-	}
-
-}*/
 
 func (s *Service) commitConclustion(vreq *ValidationRequest, results []ValidationResult, conclusion *ValidationResult) {
 	validateByBridge := false
@@ -419,6 +319,7 @@ func (s *Service) commitConclustion(vreq *ValidationRequest, results []Validatio
 		if res.Data != conclusion.Data {
 			s.CrossFailCount++
 		}
+		s.outputFailureRate(results, conclusion, vreq)
 		s.Datapool.UpdateDatapoolRemote(vreq.DatapoolId, vreq.RequestId, conclusion.Data)
 	}
 }
@@ -660,6 +561,31 @@ func (s *Service) ValidateOnBridge(vcode pb.ValidatableCode) *ValidationResult {
 	}
 }
 
+func (s *Service) outputFailureRate(results []ValidationResult, conclusion *ValidationResult, vreq *ValidationRequest) {
+	s.WorksCount++
+	if results == nil || conclusion == nil {
+		s.Lock()
+		s.ErrCount++
+		s.Unlock()
+	} else {
+		s.NodesSum += len(results)
+		s.NodesAvg = float64(s.NodesSum) / float64(s.WorksCount)
+		if conclusion.IsRejected {
+			s.RejectedCount++
+		} else if conclusion.IsError {
+			s.ErrCount++
+		} else {
+			want := vreq.ValidatableCode.Data + vreq.ValidatableCode.Add
+			if want == conclusion.Data {
+				s.SuccessCount++
+			} else {
+				s.FailedCount++
+			}
+		}
+	}
+	log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%d] NODES_AVG[%f] LOSS_B[%d] LEFT_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d] AVG_REP[%f] VAR_REP[%f] Data[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, len(results), s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.StakeLeft, s.Accounting.GoodWorkersLoss, s.OnBridgeCount, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, s.LatestData)
+}
+
 func (s *Service) Run() {
 	for {
 		select {
@@ -667,17 +593,14 @@ func (s *Service) Run() {
 			fmt.Printf("INFO %s [] OrdersServer has been stoped\n", time.Now())
 			return
 		default:
-			if len(s.ValidationRequests) > 0 && (len(s.ValidatingRequests) == 0 || s.SkipValidation) {
+			if len(s.RequestsBeforeValidation) > 0 && (s.NowValidating == nil || s.SkipValidation) {
 				vreq := s.dequeueValidationRequest()
-				s.ValidatingRequests[vreq.RequestId] = vreq
+				s.NowValidating = vreq
 				if vreq != nil {
 					log2.Debug.Printf("Got order to validate")
 					go func() {
 						ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 						defer cancel()
-						s.Lock()
-						s.WaitValidationsCount++
-						s.Unlock()
 						results, conclusion, err := s.ValidateCode(ctx, vreq.Neednum, vreq.HolderId, vreq.ValidatableCode)
 						if s.LatestVersion < int64(vreq.RequestId) {
 							if conclusion != nil {
@@ -693,32 +616,10 @@ func (s *Service) Run() {
 
 						//CalcERモードの時、結果をログに出力
 						if s.CalcER {
-							s.WorksCount++
-							if results == nil || conclusion == nil {
-								s.Lock()
-								s.ErrCount++
-								s.Unlock()
-							} else {
-								s.NodesSum += len(results)
-								s.NodesAvg = float64(s.NodesSum) / float64(s.WorksCount)
-								if conclusion.IsRejected {
-									s.RejectedCount++
-								} else if conclusion.IsError {
-									s.ErrCount++
-								} else {
-									want := vreq.ValidatableCode.Data + vreq.ValidatableCode.Add
-									if want == conclusion.Data {
-										s.SuccessCount++
-									} else {
-										s.FailedCount++
-									}
-								}
-							}
-							log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%d] NODES_AVG[%f] LOSS_B[%d] LEFT_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d] AVG_REP[%f] VAR_REP[%f] Data[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, len(results), s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.StakeLeft, s.Accounting.GoodWorkersLoss, s.OnBridgeCount, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, s.LatestData)
-							s.Lock()
-							s.WaitValidationsCount--
-							s.Unlock()
 						}
+						s.Lock()
+						s.NowValidating = nil
+						s.Unlock()
 					}()
 				}
 			}
@@ -729,7 +630,10 @@ func (s *Service) Run() {
 func (s *Service) Stop() {
 	close(s.stopChan)
 	acc := s.Accounting
+	data, _, _ := s.Datapool.FetcheDatapoolFromRemote("client30")
+	for s.GetWaitingTreeCount() > 0 {
+	}
 	log2.Export.Printf("%d,%f,%f,%f,%t,%t,%d,%d,%f,%f,%f,%f,%d,%d,%d,%d", acc.GetWorkersCount(), acc.FaultyFraction, acc.CredibilityThreshould,
 		acc.ReputationResetRate, s.SetWatcher, s.StepVoting, s.WorksCount, s.FailedCount, float64(s.FailedCount)/float64(s.WorksCount),
-		s.NodesAvg, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss, s.LatestData, s.CrossFailCount)
+		s.NodesAvg, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss, data, s.CrossFailCount)
 }
