@@ -31,17 +31,20 @@ type ValidationRequest struct {
 }
 
 type ValidationResult struct {
-	WorkerId   string
-	Data       int32
-	IsRejected bool
-	IsError    bool
-	IsFistNode bool
+	WorkerId         string
+	Data             int32
+	IsRejected       bool
+	IsError          bool
+	IsFistNode       bool
+	FirstNodeIsFault bool
 }
 
 type Service struct {
 	sync.RWMutex
+	CommitMutex                 *sync.Mutex
 	NowValidating               *ValidationRequest
 	RequestsBeforeValidation    []*ValidationRequest
+	ResultsFromUser             map[int64][]int32
 	ResultsBeforeCommit         map[int][]ValidationResult
 	ConclusionsBeforeCommit     map[int]*ValidationResult
 	RequestsBeforeCommit        map[int]*ValidationRequest
@@ -72,6 +75,8 @@ type Service struct {
 
 func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool, skipValidation bool) *Service {
 	return &Service{
+		CommitMutex:                 new(sync.Mutex),
+		ResultsFromUser:             map[int64][]int32{},
 		WaitingTree:                 []int{},
 		NowValidating:               nil,
 		RequestsBeforeValidation:    []*ValidationRequest{},
@@ -122,7 +127,7 @@ func (s *Service) getValidatableCodeRemote(holder accounting.Worker, datapoolId 
 }
 
 //ValidatableCodeを取得する
-func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add int32) (*pb.ValidatableCode, string, int, error) {
+func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add int32) (*pb.ValidatableCode, string, int, map[int64]int32, error) {
 
 	if s.SkipValidation == false {
 		//データプールが利用可能になるまで無限ループ
@@ -130,20 +135,21 @@ func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add
 			log2.Debug.Printf("Waiting List %d", s.GetWaitingTreeCount())
 			select {
 			case <-ctx.Done():
-				return nil, "", -1, nil
+				return nil, "", -1, nil, nil
 			default:
 			}
 		}
 	}
 	s.Lock()
 	myRequestID := s.NextRequestId
+	s.ResultsFromUser[int64(myRequestID)] = []int32{}
 	s.WaitingTree = append(s.WaitingTree, myRequestID)
 	s.NextRequestId++
 	s.Unlock()
 
 	holder, err := s.Datapool.SelectDataPoolHolder(datapoolId, []string{})
 	if err != nil {
-		return nil, "", -1, err
+		return nil, "", -1, nil, err
 	}
 	var vcode *pb.ValidatableCode = nil
 	if s.WithoutConnectRemoteForTest {
@@ -151,31 +157,33 @@ func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add
 			Data: 0,
 			Add:  add,
 		}
-		return vcode, holder.Id, myRequestID, nil
+		return vcode, holder.Id, myRequestID, nil, nil
 	} else {
 		vcode, err = s.getValidatableCodeRemote(*holder, datapoolId, add)
 		if err != nil {
-			return nil, holder.Id, myRequestID, err
+			return nil, holder.Id, myRequestID, nil, err
 		}
 		if vcode == nil {
-			return nil, holder.Id, myRequestID, ErrGottenDataIsNil
+			return nil, holder.Id, myRequestID, nil, ErrGottenDataIsNil
 		} else if s.SkipValidation {
 			data := vcode.Data
+			resultsMap := map[int64]int32{}
 			log2.Debug.Printf("Data is %d version[%d]", data, vcode.Version)
 			for reqID := vcode.Version + 1; reqID < int64(myRequestID); reqID++ {
 				log2.Debug.Printf("Request %d detected", reqID)
 				if reqID < int64(myRequestID) && reqID > vcode.Version {
 					data++
+					resultsMap[reqID] = data
 					log2.Debug.Printf("data was incremented %d", data)
 					s.LocalWorksCount++
 				}
 			}
 			log2.Debug.Printf("request[%d] vcode is %d + 1", myRequestID, data)
 			vcode = &pb.ValidatableCode{Data: data, Add: add}
-			return vcode, "", myRequestID, nil
+			return vcode, "", myRequestID, resultsMap, nil
 		} else {
 			log2.Debug.Printf("request[%d] vcode is %d + 1", myRequestID, vcode.Data)
-			return vcode, holder.Id, myRequestID, nil
+			return vcode, holder.Id, myRequestID, nil, nil
 		}
 	}
 }
@@ -217,12 +225,24 @@ func (s *Service) dequeueValidationRequest() *ValidationRequest {
 	return tmp
 }
 
-func (s *Service) AddValidationRequest(requestID int, datapoolId string, needNum int, holderId string, vcode *pb.ValidatableCode) {
+func (s *Service) AddValidationRequest(requestID int, datapoolId string, needNum int, holderId string, vcode *pb.ValidatableCode, resultsMap map[int64]int32) {
 	fmt.Printf("DEBUG %s [] A ValidationRequest is added to orders.service\n", time.Now().String())
 	vreq := &ValidationRequest{DatapoolId: datapoolId, Neednum: needNum, HolderId: holderId, ValidatableCode: vcode, RequestId: requestID}
 	s.Lock()
 	s.RequestsBeforeValidation = append(s.RequestsBeforeValidation, vreq)
 	s.Unlock()
+	if resultsMap != nil {
+		for key, res := range resultsMap {
+			s.RLock()
+			_, exist := s.ResultsFromUser[key]
+			s.RUnlock()
+			if exist {
+				s.Lock()
+				s.ResultsFromUser[key] = append(s.ResultsFromUser[key], res)
+				s.Unlock()
+			}
+		}
+	}
 	s.addRequestToTree(vreq)
 	fmt.Printf("DEBUG %s [] Waiting RequestsBeforeValidation count is %d\n", time.Now().String(), len(s.RequestsBeforeValidation))
 }
@@ -269,6 +289,7 @@ func (s *Service) addRequestToTree(vreq *ValidationRequest) {
 }
 
 func (s *Service) commitConclusionToTree(id int, results []ValidationResult, conclusion *ValidationResult) {
+	s.CommitMutex.Lock()
 	s.Lock()
 	s.ResultsBeforeCommit[id] = results
 	s.ConclusionsBeforeCommit[id] = conclusion
@@ -294,20 +315,35 @@ func (s *Service) commitConclusionToTree(id int, results []ValidationResult, con
 			break
 		}
 	}
+	s.CommitMutex.Unlock()
 }
 
 func (s *Service) commitConclustion(vreq *ValidationRequest, results []ValidationResult, conclusion *ValidationResult) {
 	validateByBridge := false
+	s.RLock()
+	resFromUser, exist := s.ResultsFromUser[int64(vreq.RequestId)]
+	s.RUnlock()
 	if s.DoesValidationNeed(results, *conclusion) && s.SetWatcher {
 		conclusion = s.ValidateOnBridge(*vreq.ValidatableCode)
 		s.OnBridgeCount++
 		validateByBridge = true
-	} else if s.SkipValidation {
+	} else if s.SkipValidation && conclusion.FirstNodeIsFault == false {
 		conclusion = s.ValidateOnBridge(*vreq.ValidatableCode)
 		if s.DoesValidationNeed(results, *conclusion) {
 			s.OnBridgeCount++
 			validateByBridge = true
 		}
+	} else if exist {
+		for _, data := range resFromUser {
+			if conclusion.Data != data {
+				conclusion = s.ValidateOnBridge(*vreq.ValidatableCode)
+				validateByBridge = true
+				break
+			}
+		}
+		s.Lock()
+		s.ResultsFromUser[int64(vreq.RequestId)] = nil
+		s.Unlock()
 	}
 	//結果から評価値を登録
 	fmt.Printf("INFO %s [] END - Validations by remote workers", time.Now())
@@ -528,7 +564,7 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 
 			//nextpicksもwaitlistも空になったら終了
 			if len(nextpicks) <= 0 && len(waitlist) <= 0 {
-				conclusion := &ValidationResult{WorkerId: "", Data: resultData[maxGroup], IsRejected: false, IsError: false}
+				conclusion := &ValidationResult{WorkerId: "", Data: resultData[maxGroup], IsRejected: false, IsError: false, FirstNodeIsFault: true}
 				return results, conclusion, nil
 			}
 
@@ -583,7 +619,7 @@ func (s *Service) outputFailureRate(results []ValidationResult, conclusion *Vali
 			}
 		}
 	}
-	log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%d] NODES_AVG[%f] LOSS_B[%d] LEFT_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d] AVG_REP[%f] VAR_REP[%f] Data[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, len(results), s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.StakeLeft, s.Accounting.GoodWorkersLoss, s.OnBridgeCount, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, s.LatestData)
+	log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%d] NODES_AVG[%f] LOSS_B[%d] LEFT_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d] AVG_REP[%f] VAR_REP[%f] Data[%d] REQ_ID[%d] LOCAL_WORKS[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, len(results), s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.StakeLeft, s.Accounting.GoodWorkersLoss, s.OnBridgeCount, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, conclusion.Data, vreq.RequestId, s.LocalWorksCount)
 }
 
 func (s *Service) Run() {
@@ -633,7 +669,7 @@ func (s *Service) Stop() {
 	data, _, _ := s.Datapool.FetcheDatapoolFromRemote("client30")
 	for s.GetWaitingTreeCount() > 0 {
 	}
-	log2.Export.Printf("%d,%f,%f,%f,%t,%t,%d,%d,%f,%f,%f,%f,%d,%d,%d,%d", acc.GetWorkersCount(), acc.FaultyFraction, acc.CredibilityThreshould,
+	log2.Export.Printf("%d,%f,%f,%f,%t,%t,%d,%d,%f,%f,%f,%f,%d,%d,%d,%d,%d", acc.GetWorkersCount(), acc.FaultyFraction, acc.CredibilityThreshould,
 		acc.ReputationResetRate, s.SetWatcher, s.StepVoting, s.WorksCount, s.FailedCount, float64(s.FailedCount)/float64(s.WorksCount),
-		s.NodesAvg, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss, data, s.CrossFailCount)
+		s.NodesAvg, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss, data, s.CrossFailCount, s.LocalWorksCount)
 }

@@ -1,1 +1,15 @@
-go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 100 -validators 2 -reset 0.1 -fault 0.4 -cred 0.99 -attack 4 -watcher -step -skip
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.4 -cred 0.99 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.2 -cred 0.99 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.1 -cred 0.99 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.4 -cred 0.999 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.2 -cred 0.999 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.1 -cred 0.999 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.4 -cred 0.9999 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.2 -cred 0.9999 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.1 -cred 0.9999 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.4 -cred 0.99999 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.2 -cred 0.99999 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.1 -cred 0.99999 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.4 -cred 0.999999 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.2 -cred 0.999999 -attack 1
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 10000 -validators 2 -reset 0 -fault 0.1 -cred 0.999999 -attack 1

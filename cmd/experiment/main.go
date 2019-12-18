@@ -171,7 +171,7 @@ func main() {
 			ctxOrder, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 			defer cancel()
 			waitForValidation := false
-			if *skipValidationOpt || i == requestsCount-1 {
+			if *skipValidationOpt == false || i == requestsCount-1 {
 				waitForValidation = true
 			}
 			req := &bpb.ValidatableCodeRequest{Datapoolid: myDatapool.Datapoolid, Add: 1, WaitForValidation: waitForValidation}
