@@ -15,7 +15,7 @@ var Export *log.Logger
 var exportResult *os.File
 
 func init() {
-	file, err := os.OpenFile("log/debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile("log/debug.log", os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		Debug = log.New(os.Stdout, "[DEBUG]", log.LstdFlags)
 	} else {
