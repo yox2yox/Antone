@@ -67,6 +67,7 @@ type Service struct {
 	NodesSum                    int
 	SetWatcher                  bool
 	SkipValidation              bool
+	SabotagableReputation       int
 	WorkerAttackMode            int
 	LatestData                  int32
 	LatestVersion               int64
@@ -74,7 +75,7 @@ type Service struct {
 	stopChan                    chan struct{}
 }
 
-func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool, skipValidation bool, workerAttackMode int) *Service {
+func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool, skipValidation bool, workerAttackMode int, sabotagableReputation int) *Service {
 	return &Service{
 		CommitMutex:                 new(sync.Mutex),
 		ResultsFromUser:             map[int64][]int32{},
@@ -101,6 +102,7 @@ func NewService(accounting *accounting.Service, datapool *datapool.Service, with
 		StepVoting:                  stepVoting,
 		SkipValidation:              skipValidation,
 		WorkerAttackMode:            workerAttackMode,
+		SabotagableReputation:       sabotagableReputation,
 		stopChan:                    make(chan struct{}),
 	}
 }
@@ -199,7 +201,8 @@ func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.Valida
 	workerClient := workerpb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add, Reputation: int32(worker.Reputation), Badreputations: badreputations, Threshould: float32(s.Accounting.CredibilityThreshould), Resetrate: float32(s.Accounting.ReputationResetRate), FirstNodeIsfault: firstNodeIsFault, FaultyFraction: s.Accounting.FaultyFraction}
+	unsabotagable := s.Accounting.CountBadWorkersReputationLT(s.SabotagableReputation)
+	vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add, Reputation: int32(worker.Reputation), Badreputations: badreputations, Threshould: float32(s.Accounting.CredibilityThreshould), Resetrate: float32(s.Accounting.ReputationResetRate), FirstNodeIsfault: firstNodeIsFault, FaultyFraction: s.Accounting.FaultyFraction, CountUnstabotagable: int32(unsabotagable)}
 	validationResult, err := workerClient.OrderValidation(ctx, vCodeWorker)
 	if err != nil {
 		log2.Err.Printf("failed to validation on remote %#v", err)
@@ -562,7 +565,7 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 				nextpicks, err = s.Accounting.SelectValidationWorkersWithThreshold(0, credG, maxGroup, s.StepVoting, waitlist, unavailable)
 			}
 			if err != nil {
-				log2.Err.Printf("Failed to calc Next Workers %#v", err)
+				log2.Err.Printf("Failed to calc Next Workers %#v", err) //error happened
 				return results, nil, err
 			}
 

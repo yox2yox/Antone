@@ -201,6 +201,19 @@ func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int, credG []
 	}
 }
 
+//CountBadWorkersReputationLT reputationを下回る評価値を持つ不正ワーカの数を取得
+func (s *Service) CountBadWorkersReputationLT(reputation int) int {
+	count := 0
+	s.RLock()
+	for _, worker := range s.Workers {
+		if worker.IsBad && worker.Reputation < reputation {
+			count++
+		}
+	}
+	s.RUnlock()
+	return count
+}
+
 /* Setter */
 func (s *Service) CreateNewBadWorker(workerId string, Addr string) (*Worker, error) {
 	worker, err := s.CreateNewWorker(workerId, Addr)

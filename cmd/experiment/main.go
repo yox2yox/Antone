@@ -20,21 +20,22 @@ import (
 )
 
 var (
-	addrOpt              = flag.String("a", "", "help message for \"a\" option")
-	attackModeOpt        = flag.Int("attack", 0, "help message for \"attack\" option")
-	validatorsNumOpt     = flag.Int("validators", 1, "help message for \"validators\" option")
-	portOpt              = flag.Int("port", -1, "help message for \"port\" option")
-	numOpt               = flag.Int("num", 1, "help message for \"port\" option")
-	badnumOpt            = flag.Int("bad", 0, "help message for \"bad\" option")
-	requestsCountOpt     = flag.Int("req", 1, "help message for \"port\" option")
-	faultyFrationOpt     = flag.Float64("fault", 0.4, "help message for \"fault\" option")
-	credibilityOpt       = flag.Float64("cred", 0.9, "help message for \"cred\" option")
-	resetRateOpt         = flag.Float64("reset", 0, "help message for \"reset\" option")
-	watcherOpt           = flag.Bool("watcher", false, "help message for \"watcher\" option")
-	blackListingOpt      = flag.Bool("blacklist", false, "help message for \"blacklist\" option")
-	stepVotingOpt        = flag.Bool("step", false, "help message for \"step\" option")
-	skipValidationOpt    = flag.Bool("skip", false, "help message for \"skip\" option")
-	initialReputationOpt = flag.Int("inirep", 0, "help message for \"inirep\" option")
+	addrOpt                  = flag.String("a", "", "help message for \"a\" option")
+	attackModeOpt            = flag.Int("attack", 0, "help message for \"attack\" option")
+	validatorsNumOpt         = flag.Int("validators", 1, "help message for \"validators\" option")
+	portOpt                  = flag.Int("port", -1, "help message for \"port\" option")
+	numOpt                   = flag.Int("num", 1, "help message for \"port\" option")
+	badnumOpt                = flag.Int("bad", 0, "help message for \"bad\" option")
+	requestsCountOpt         = flag.Int("req", 1, "help message for \"port\" option")
+	faultyFrationOpt         = flag.Float64("fault", 0.4, "help message for \"fault\" option")
+	credibilityOpt           = flag.Float64("cred", 0.9, "help message for \"cred\" option")
+	resetRateOpt             = flag.Float64("reset", 0, "help message for \"reset\" option")
+	watcherOpt               = flag.Bool("watcher", false, "help message for \"watcher\" option")
+	blackListingOpt          = flag.Bool("blacklist", false, "help message for \"blacklist\" option")
+	stepVotingOpt            = flag.Bool("step", false, "help message for \"step\" option")
+	skipValidationOpt        = flag.Bool("skip", false, "help message for \"skip\" option")
+	initialReputationOpt     = flag.Int("inirep", 0, "help message for \"inirep\" option")
+	sabotagableReputationOpt = flag.Int("sabrep", 0, "help message for \"sabrep\" option")
 )
 
 func main() {
@@ -81,7 +82,7 @@ func main() {
 	}
 
 	//ブリッジ起動
-	peerBridge, err := bridge.New(config, false, *faultyFrationOpt, *credibilityOpt, *resetRateOpt, *watcherOpt, *blackListingOpt, *stepVotingOpt, *skipValidationOpt, *initialReputationOpt, *attackModeOpt)
+	peerBridge, err := bridge.New(config, false, *faultyFrationOpt, *credibilityOpt, *resetRateOpt, *watcherOpt, *blackListingOpt, *stepVotingOpt, *skipValidationOpt, *initialReputationOpt, *attackModeOpt, *sabotagableReputationOpt)
 	if err != nil {
 		fmt.Printf("FATAL %s [] Failed to initialize peer", time.Now())
 	}
