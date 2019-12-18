@@ -403,7 +403,7 @@ func (s *Service) calcAverageCredibility() float64 {
 	avg := s.AverageReputation
 	s.Unlock()
 	sumVar := 0.0
-	for _, worker := range s.Workers {
+	for _, worker := range workers {
 		cred := stolerance.CalcWorkerCred(s.FaultyFraction, worker.Reputation)
 		sumVar += (avg - cred) * (avg - cred)
 	}
