@@ -301,9 +301,11 @@ func (s *Service) commitConclusionToTree(id int, results []ValidationResult, con
 	wRequests := map[int]*ValidationRequest{}
 
 	for _, id := range s.WaitingTree {
+		s.RLock()
 		res, exist := s.ResultsBeforeCommit[id]
 		conc, existConc := s.ConclusionsBeforeCommit[id]
 		req, existReq := s.RequestsBeforeCommit[id]
+		s.RUnlock()
 		if exist && existReq && existConc {
 			wResults[id] = results
 			wConclusions[id] = conc
