@@ -390,23 +390,24 @@ func (s *Service) calcAverageCredibility() float64 {
 	sum := 0.0
 	sumRep := 0
 	s.RLock()
-	workers := s.Workers
-	s.RUnlock()
-	for _, worker := range workers {
+	for _, worker := range s.Workers {
 		cred := stolerance.CalcWorkerCred(s.FaultyFraction, worker.Reputation)
 		sum += cred
 		sumRep += worker.Reputation
 	}
+	s.RUnlock()
 	s.Lock()
 	s.AverageCredibility = sum / float64(len(s.Workers))
 	s.AverageReputation = float64(sumRep) / float64(len(s.Workers))
 	avg := s.AverageReputation
 	s.Unlock()
 	sumVar := 0.0
-	for _, worker := range workers {
+	s.RLock()
+	for _, worker := range s.Workers {
 		cred := stolerance.CalcWorkerCred(s.FaultyFraction, worker.Reputation)
 		sumVar += (avg - cred) * (avg - cred)
 	}
+	s.RUnlock()
 	s.Lock()
 	s.VarianceReputation = math.Sqrt(sumVar / float64(len(s.Workers)))
 	s.Unlock()
