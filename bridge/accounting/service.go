@@ -47,9 +47,10 @@ type Service struct {
 	StakeLeft                   int
 	BlackListing                bool
 	StepVoting                  bool
+	InitialReputation           int
 }
 
-func NewService(withoutConnectRemoteForTest bool, faultyFraction float64, credibilityThreshould float64, reputationResetRate float64, blackListing bool, stepVoting bool) *Service {
+func NewService(withoutConnectRemoteForTest bool, faultyFraction float64, credibilityThreshould float64, reputationResetRate float64, blackListing bool, stepVoting bool, initialReputation int) *Service {
 	log2.Debug.Printf("Credibility Threshould is %f", credibilityThreshould)
 	return &Service{
 		Workers:                     map[string]*Worker{},
@@ -68,6 +69,7 @@ func NewService(withoutConnectRemoteForTest bool, faultyFraction float64, credib
 		BlackListing:                blackListing,
 		StepVoting:                  stepVoting,
 		WithoutConnectRemoteForTest: withoutConnectRemoteForTest,
+		InitialReputation:           initialReputation,
 	}
 }
 
@@ -226,8 +228,8 @@ func (s *Service) CreateNewWorker(workerId string, Addr string) (*Worker, error)
 	worker := &Worker{
 		Addr:          Addr,
 		Id:            workerId,
-		Reputation:    0,
-		GoodWorkCount: 0,
+		Reputation:    s.InitialReputation,
+		GoodWorkCount: s.InitialReputation,
 		Balance:       s.MaxStake,
 		IsBad:         false,
 		Holdinds:      []string{},

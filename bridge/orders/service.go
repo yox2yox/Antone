@@ -67,13 +67,14 @@ type Service struct {
 	NodesSum                    int
 	SetWatcher                  bool
 	SkipValidation              bool
+	WorkerAttackMode            int
 	LatestData                  int32
 	LatestVersion               int64
 	NextRequestId               int
 	stopChan                    chan struct{}
 }
 
-func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool, skipValidation bool) *Service {
+func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool, skipValidation bool, workerAttackMode int) *Service {
 	return &Service{
 		CommitMutex:                 new(sync.Mutex),
 		ResultsFromUser:             map[int64][]int32{},
@@ -99,6 +100,7 @@ func NewService(accounting *accounting.Service, datapool *datapool.Service, with
 		SetWatcher:                  setWatcher,
 		StepVoting:                  stepVoting,
 		SkipValidation:              skipValidation,
+		WorkerAttackMode:            workerAttackMode,
 		stopChan:                    make(chan struct{}),
 	}
 }
@@ -671,7 +673,10 @@ func (s *Service) Stop() {
 	data, _, _ := s.Datapool.FetcheDatapoolFromRemote("client30")
 	for s.GetWaitingTreeCount() > 0 {
 	}
-	log2.Export.Printf("%d,%f,%f,%f,%t,%t,%d,%d,%f,%f,%f,%f,%d,%d,%d,%d,%d", acc.GetWorkersCount(), acc.FaultyFraction, acc.CredibilityThreshould,
-		acc.ReputationResetRate, s.SetWatcher, s.StepVoting, s.WorksCount, s.FailedCount, float64(s.FailedCount)/float64(s.WorksCount),
-		s.NodesAvg, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss, data, s.CrossFailCount, s.LocalWorksCount)
+	log2.Export.Printf("%d %f %f %f %d %t %t %t %t %d %d %d %f %f %f %f %d %d %d %d %d", acc.GetWorkersCount(),
+		acc.FaultyFraction, acc.CredibilityThreshould, acc.ReputationResetRate, s.Accounting.InitialReputation,
+		s.SetWatcher, s.StepVoting, s.Accounting.BlackListing, s.SkipValidation, s.WorkerAttackMode, s.WorksCount,
+		s.FailedCount, float64(s.FailedCount)/float64(s.WorksCount), s.NodesAvg, s.Accounting.AverageReputation,
+		s.Accounting.VarianceReputation, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss, data,
+		s.CrossFailCount, s.LocalWorksCount)
 }
