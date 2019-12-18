@@ -389,7 +389,10 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 func (s *Service) calcAverageCredibility() float64 {
 	sum := 0.0
 	sumRep := 0
-	for _, worker := range s.Workers {
+	s.RLock()
+	workers := s.Workers
+	s.RUnlock()
+	for _, worker := range workers {
 		cred := stolerance.CalcWorkerCred(s.FaultyFraction, worker.Reputation)
 		sum += cred
 		sumRep += worker.Reputation
