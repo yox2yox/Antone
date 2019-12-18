@@ -49,40 +49,30 @@ type Service struct {
 	StepVoting                  bool
 }
 
-var (
-	ErrIDNotExist                = errors.New("this id doesn't exist")
-	ErrIDAlreadyExists           = errors.New("this id already exsits")
-	ErrWorkersAreNotEnough       = errors.New("There are not enough workers")
-	ErrDataPoolHolderNotExist    = errors.New("this user's datapool doesn't exist")
-	ErrDataPoolAlreadyExists     = errors.New("this user's datapool already exists")
-	ErrCreateDataPoolNotComplete = errors.New("failed to complete to create datepool")
-	ErrArgumentIsInvalid         = errors.New("an argument is invalid")
-	ErrFailedToComplete          = errors.New("Failed to complete work")
-)
-
 func NewService(withoutConnectRemoteForTest bool, faultyFraction float64, credibilityThreshould float64, reputationResetRate float64, blackListing bool, stepVoting bool) *Service {
 	log2.Debug.Printf("Credibility Threshould is %f", credibilityThreshould)
 	return &Service{
-		Workers:               map[string]*Worker{},
-		Clients:               map[string]*Client{},
-		WorkersId:             []string{},
-		AverageCredibility:    0.7,
-		AverageReputation:     0,
-		FaultyFraction:        faultyFraction,
-		CredibilityThreshould: credibilityThreshould,
-		ReputationResetRate:   reputationResetRate,
-		BadWorkersLoss:        0,
-		GoodWorkersLoss:       0,
-		MaxStake:              10000,
-		MinStake:              100,
-		StakeLeft:             0,
-		BlackListing:          blackListing,
-		StepVoting:            stepVoting,
-		//Holders:                     map[string][]string{},
+		Workers:                     map[string]*Worker{},
+		Clients:                     map[string]*Client{},
+		WorkersId:                   []string{},
+		AverageCredibility:          0.7,
+		AverageReputation:           0,
+		FaultyFraction:              faultyFraction,
+		CredibilityThreshould:       credibilityThreshould,
+		ReputationResetRate:         reputationResetRate,
+		BadWorkersLoss:              0,
+		GoodWorkersLoss:             0,
+		MaxStake:                    10000,
+		MinStake:                    100,
+		StakeLeft:                   0,
+		BlackListing:                blackListing,
+		StepVoting:                  stepVoting,
 		WithoutConnectRemoteForTest: withoutConnectRemoteForTest,
 	}
 }
 
+/* Public Functions */
+//Worker情報を取得
 func (s *Service) GetWorker(workerId string) (Worker, error) {
 	_, exist := s.Workers[workerId]
 	if !exist {
@@ -91,68 +81,70 @@ func (s *Service) GetWorker(workerId string) (Worker, error) {
 	return *s.Workers[workerId], nil
 }
 
-func (s *Service) GetClient(userId string) (Client, error) {
-	_, exist := s.Clients[userId]
+//GetClient はClient情報を取得します
+func (s *Service) GetClient(userID string) (Client, error) {
+	_, exist := s.Clients[userID]
 	if !exist {
 		return Client{}, ErrIDNotExist
 	}
-	return *s.Clients[userId], nil
+	return *s.Clients[userID], nil
 }
 
+//GetWorkersCount will get workers' count
 func (s *Service) GetWorkersCount() int {
 	return len(s.Workers)
 }
 
-//exceptionを除くworkerの中からnum台選択して返す
-func (s *Service) SelectValidationWorkers(num int, exception []string) ([]*Worker, error) {
+//SelectValidationWorkers exceptionを除くworkerの中からnum台選択して返す
+func (s *Service) SelectValidationWorkers(num int, exceptWorkersID []string) ([]*Worker, error) {
 
-	log2.Debug.Printf("starting select %d workers except %#v", num, exception)
+	log2.Debug.Printf("start to select %d workers except %#v", num, exceptWorkersID)
 
-	if len(s.Workers)-len(exception) < num {
+	if len(s.Workers)-len(exceptWorkersID) < num {
 		return nil, ErrWorkersAreNotEnough
 	}
 
 	rand.Seed(time.Now().UnixNano())
-	picked := []*Worker{}
+	selected := []*Worker{}
 
 	for i := 0; i < num; i++ {
 		s.RLock()
-		pickedId := s.WorkersId[rand.Intn(len(s.WorkersId))]
+		pickedID := s.WorkersId[rand.Intn(len(s.WorkersId))]
 		s.RUnlock()
-		log2.Debug.Printf("worker:%s is picked.", pickedId)
-		contain := false
-		worker, err := s.GetWorker(pickedId)
+		log2.Debug.Printf("worker:%s was picked.", pickedID)
+		available := true
+		worker, err := s.GetWorker(pickedID)
 		if err != nil {
-			contain = true
+			available = false
 		} else {
 			log2.Debug.Printf("picked workers balance: %d", worker.Balance)
 			if worker.Balance < s.MinStake {
-				contain = true
+				available = false
 			}
 		}
-		for _, id := range picked {
-			if id.Id == pickedId {
-				contain = true
+		for _, id := range selected {
+			if id.Id == pickedID {
+				available = false
 			}
 		}
-		for _, id := range exception {
-			if id == pickedId {
-				contain = true
+		for _, id := range exceptWorkersID {
+			if id == pickedID {
+				available = false
 			}
 		}
-		if contain == false {
-			picked = append(picked, s.Workers[pickedId])
-			log2.Debug.Printf("worker:%s Address:%s is finaly selected", pickedId, s.Workers[pickedId].Addr)
+		if available {
+			selected = append(selected, s.Workers[pickedID])
+			log2.Debug.Printf("worker:%s Address:%s is finaly selected", pickedID, s.Workers[pickedID].Addr)
 		} else {
 			i--
 		}
 	}
 
-	return picked, nil
+	return selected, nil
 }
 
-//Thresoldに達するまでワーカーを選出
-func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int, credG [][]float64, targetIndex int, stepVoting bool, waitlist []string, exception []string) ([]*Worker, error) {
+//SelectValidationWorkersWithThreshold Thresoldに達するまでワーカーを選出
+func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int, credG [][]float64, targetIndex int, useStepVoting bool, waitlist []string, exceptWorkersID []string) ([]*Worker, error) {
 
 	if len(credG) <= targetIndex {
 		return nil, errors.New("index is out of range")
@@ -160,12 +152,13 @@ func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int, credG []
 
 	gotWorkers := []*Worker{}
 	for {
+		//waitlist内のワーカーのCredibilityを先に取得
 		if len(waitlist) > 0 {
 			for _, workerid := range waitlist {
 				w, err := s.GetWorker(workerid)
 				if err == nil {
 					var credibility float64 = 0
-					if stepVoting {
+					if useStepVoting {
 						credibility = stolerance.CalcSecondaryWorkerCred(s.FaultyFraction, w.Reputation)
 					} else {
 						credibility = stolerance.CalcWorkerCred(s.FaultyFraction, w.Reputation)
@@ -177,7 +170,7 @@ func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int, credG []
 		}
 
 		var gCred float64
-		if stepVoting {
+		if useStepVoting {
 			gCred = stolerance.CalcStepVotingGruopCred(targetIndex, credG)
 		} else {
 			gCred = stolerance.CalcRGroupCred(targetIndex, credG)
@@ -186,29 +179,27 @@ func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int, credG []
 			log2.Debug.Printf("Got %d workers", len(gotWorkers))
 			if len(gotWorkers) >= needAtLeast {
 				return gotWorkers, nil
-			} else {
-				need := needAtLeast - len(gotWorkers)
-				workers, err := s.SelectValidationWorkers(need, exception)
-				if err != nil {
-					return nil, err
-				} else {
-					gotWorkers = append(gotWorkers, workers...)
-					return gotWorkers, nil
-				}
 			}
-		} else {
-			workers, err := s.SelectValidationWorkers(1, exception)
-			if err != nil || len(workers) < 1 {
+			need := needAtLeast - len(gotWorkers)
+			workers, err := s.SelectValidationWorkers(need, exceptWorkersID)
+			if err != nil {
 				return nil, err
 			}
-			credibility := stolerance.CalcWorkerCred(s.FaultyFraction, workers[0].Reputation)
-			gotWorkers = append(gotWorkers, workers[0])
-			credG[targetIndex] = append(credG[targetIndex], credibility)
-			exception = append(exception, workers[0].Id)
+			gotWorkers = append(gotWorkers, workers...)
+			return gotWorkers, nil
 		}
+		workers, err := s.SelectValidationWorkers(1, exceptWorkersID)
+		if err != nil || len(workers) < 1 {
+			return nil, err
+		}
+		credibility := stolerance.CalcWorkerCred(s.FaultyFraction, workers[0].Reputation)
+		gotWorkers = append(gotWorkers, workers[0])
+		credG[targetIndex] = append(credG[targetIndex], credibility)
+		exceptWorkersID = append(exceptWorkersID, workers[0].Id)
 	}
 }
 
+/* Setter */
 func (s *Service) CreateNewBadWorker(workerId string, Addr string) (*Worker, error) {
 	worker, err := s.CreateNewWorker(workerId, Addr)
 	if err != nil {
