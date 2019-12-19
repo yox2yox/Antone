@@ -95,13 +95,12 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 		if e.BadMode && validatableCode.CountUnstabotagable <= 0 {
 			stabotageRate := 1.0
 			if len(validatableCode.Badreputations) <= 1 {
-				if stolerance.CalcWorkerCred(validatableCode.FaultyFraction, int(validatableCode.Badreputations[0])) > float64(validatableCode.Threshould) {
-					log2.Debug.Printf("first bad node start calc satabotage")
-					rand.Seed(time.Now().UnixNano())
-					if rand.Float64() <= stabotageRate {
-						log2.Debug.Printf("first bad node try to sabotage")
-						return &pb.ValidationResult{Pool: -1, Reject: false}, nil
-					}
+				cred := stolerance.CalcWorkerCred(validatableCode.FaultyFraction, int(validatableCode.Badreputations[0]))
+				log2.Debug.Printf("first bad node start calc satabotage %d %f", validatableCode.Badreputations[0], cred)
+				rand.Seed(time.Now().UnixNano())
+				if rand.Float64() <= stabotageRate {
+					log2.Debug.Printf("first bad node try to sabotage")
+					return &pb.ValidationResult{Pool: -1, Reject: false}, nil
 				}
 			} else if validatableCode.FirstNodeIsfault {
 				log2.Debug.Printf("first node was fault")

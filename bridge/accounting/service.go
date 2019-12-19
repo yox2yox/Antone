@@ -331,7 +331,7 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 
 	log2.Debug.Printf("start updating the reputation of WORKER[%s]", workerId)
 
-	worker, exist := s.Workers[workerId]
+	_, exist := s.Workers[workerId]
 	if !exist {
 		log2.Debug.Printf("failed to update the reputation of WORKER[%s] %s", workerId, ErrIDNotExist)
 		return 0, ErrIDNotExist
@@ -348,9 +348,9 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 		}
 		s.Workers[workerId].GoodWorkCount += 1
 
-		stakeRate := float64(worker.Balance) / float64(s.MaxStake)
+		stakeRate := 1.0 //float64(worker.Balance) / float64(s.MaxStake)
 		if stakeRate > 1 {
-			stakeRate = 1
+			stakeRate = 1.0
 		}
 		rep = s.Workers[workerId].Reputation
 		n, err := crand.Int(crand.Reader, big.NewInt(1000000))
@@ -358,7 +358,7 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 			log2.Err.Printf("failed to get random number")
 		} else {
 			resetRate := s.ReputationResetRate
-			if n.Cmp(big.NewInt(int64((1-resetRate)*stakeRate*1000000))) > -1 {
+			if n.Cmp(big.NewInt(int64((1-resetRate)*stakeRate*1000000))) == 1 {
 				//reset, err := crand.Int(crand.Reader, big.NewInt(100))
 				if err != nil {
 					log2.Err.Printf("failed to get random number")
@@ -375,8 +375,8 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 	} else {
 		//バリデーション失敗時の処理
 		s.Lock()
-		s.Workers[workerId].Reputation = 0
 		if s.BlackListing {
+			s.Workers[workerId].Reputation = 0
 			balanceBefore := s.Workers[workerId].Balance
 			if validateByBridge {
 				s.Workers[workerId].Balance = 0
@@ -393,8 +393,8 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 			} else {
 				s.GoodWorkersLoss += sub
 			}
+			s.Workers[workerId].GoodWorkCount = 0
 		}
-		s.Workers[workerId].GoodWorkCount = 0
 		rep = s.Workers[workerId].Reputation
 		s.Unlock()
 		s.calcAverageCredibility()
