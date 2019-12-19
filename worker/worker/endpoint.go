@@ -92,7 +92,7 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 
 	if e.AttackMode == 4 {
 		// Attack 4 : Credibilityおよび不正ワーカ数を利用For Step Voting
-		if e.BadMode {
+		if e.BadMode && validatableCode.CountUnstabotagable <= 0 {
 			stabotageRate := 1.0
 			if len(validatableCode.Badreputations) <= 1 {
 				if stolerance.CalcWorkerCred(validatableCode.FaultyFraction, int(validatableCode.Badreputations[0])) > float64(validatableCode.Threshould) {

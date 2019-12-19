@@ -178,6 +178,7 @@ func main() {
 			}
 			req := &bpb.ValidatableCodeRequest{Datapoolid: myDatapool.Datapoolid, Add: 1, WaitForValidation: waitForValidation}
 			clientOrder.RequestValidatableCode(ctxOrder, req)
+			log2.Debug.Printf("Got Validatablecode in client")
 		}
 		close(errch)
 	}()

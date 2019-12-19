@@ -76,11 +76,14 @@ func NewService(withoutConnectRemoteForTest bool, faultyFraction float64, credib
 /* Public Functions */
 //Worker情報を取得
 func (s *Service) GetWorker(workerId string) (Worker, error) {
-	_, exist := s.Workers[workerId]
+	s.RLock()
+	worker, exist := s.Workers[workerId]
+	workerData := *worker
+	s.RUnlock()
 	if !exist {
 		return Worker{}, ErrIDNotExist
 	}
-	return *s.Workers[workerId], nil
+	return workerData, nil
 }
 
 //GetClient はClient情報を取得します

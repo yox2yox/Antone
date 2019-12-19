@@ -42,6 +42,7 @@ type ValidationResult struct {
 type Service struct {
 	sync.RWMutex
 	CommitMutex                 *sync.Mutex
+	WaitGroupForValidation      *sync.WaitGroup
 	NowValidating               *ValidationRequest
 	RequestsBeforeValidation    []*ValidationRequest
 	ResultsFromUser             map[int64][]int32
@@ -77,6 +78,7 @@ type Service struct {
 
 func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool, skipValidation bool, workerAttackMode int, sabotagableReputation int) *Service {
 	return &Service{
+		WaitGroupForValidation:      &sync.WaitGroup{},
 		CommitMutex:                 new(sync.Mutex),
 		ResultsFromUser:             map[int64][]int32{},
 		WaitingTree:                 []int{},
@@ -134,16 +136,10 @@ func (s *Service) getValidatableCodeRemote(holder accounting.Worker, datapoolId 
 func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add int32) (*pb.ValidatableCode, string, int, map[int64]int32, error) {
 
 	if s.SkipValidation == false {
-		//データプールが利用可能になるまで無限ループ
-		for s.GetWaitingTreeCount() > 0 {
-			log2.Debug.Printf("Waiting List %d", s.GetWaitingTreeCount())
-			select {
-			case <-ctx.Done():
-				return nil, "", -1, nil, nil
-			default:
-			}
-		}
+		//データプールが利用可能になるまで待機
+		s.WaitGroupForValidation.Wait()
 	}
+	s.WaitGroupForValidation.Add(1)
 	s.Lock()
 	myRequestID := s.NextRequestId
 	s.ResultsFromUser[int64(myRequestID)] = []int32{}
@@ -656,10 +652,7 @@ func (s *Service) Run() {
 						} else if results != nil {
 							s.commitConclusionToTree(vreq.RequestId, results, conclusion)
 						}
-
-						//CalcERモードの時、結果をログに出力
-						if s.CalcER {
-						}
+						s.WaitGroupForValidation.Done()
 						s.Lock()
 						s.NowValidating = nil
 						s.Unlock()
@@ -674,8 +667,7 @@ func (s *Service) Stop() {
 	close(s.stopChan)
 	acc := s.Accounting
 	data, _, _ := s.Datapool.FetcheDatapoolFromRemote("client30")
-	for s.GetWaitingTreeCount() > 0 {
-	}
+	s.WaitGroupForValidation.Wait()
 	log2.Export.Printf("%d %f %f %f %d %t %t %t %t %d %d %d %f %f %f %f %d %d %d %d %d", acc.GetWorkersCount(),
 		acc.FaultyFraction, acc.CredibilityThreshould, acc.ReputationResetRate, s.Accounting.InitialReputation,
 		s.SetWatcher, s.StepVoting, s.Accounting.BlackListing, s.SkipValidation, s.WorkerAttackMode, s.WorksCount,
