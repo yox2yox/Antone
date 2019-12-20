@@ -76,9 +76,12 @@ func NewService(withoutConnectRemoteForTest bool, faultyFraction float64, credib
 /* Public Functions */
 //Worker情報を取得
 func (s *Service) GetWorker(workerId string) (Worker, error) {
+	workerData := Worker{}
 	s.RLock()
 	worker, exist := s.Workers[workerId]
-	workerData := *worker
+	if exist {
+		workerData = *worker
+	}
 	s.RUnlock()
 	if !exist {
 		return Worker{}, ErrIDNotExist
@@ -422,7 +425,7 @@ func (s *Service) calcAverageCredibility() float64 {
 	sumVar := 0.0
 	s.RLock()
 	for _, worker := range s.Workers {
-		cred := stolerance.CalcWorkerCred(s.FaultyFraction, worker.Reputation)
+		cred := float64(worker.Reputation)
 		sumVar += (avg - cred) * (avg - cred)
 	}
 	s.RUnlock()

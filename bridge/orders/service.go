@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 	"yox2yox/antone/bridge/accounting"
@@ -55,6 +56,7 @@ type Service struct {
 	Running                     bool
 	WithoutConnectRemoteForTest bool
 	CalcER                      bool
+	ExportReputations           int
 	StepVoting                  bool
 	ErrCount                    int
 	FailedCount                 int
@@ -76,7 +78,7 @@ type Service struct {
 	stopChan                    chan struct{}
 }
 
-func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool, skipValidation bool, workerAttackMode int, sabotagableReputation int) *Service {
+func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool, skipValidation bool, workerAttackMode int, sabotagableReputation int, exportReputations int) *Service {
 	return &Service{
 		WaitGroupForValidation:      &sync.WaitGroup{},
 		CommitMutex:                 new(sync.Mutex),
@@ -92,6 +94,7 @@ func NewService(accounting *accounting.Service, datapool *datapool.Service, with
 		Running:                     false,
 		WithoutConnectRemoteForTest: withoutConnectRemoteForTest,
 		CalcER:                      calcER,
+		ExportReputations:           exportReputations,
 		ErrCount:                    0,
 		SuccessCount:                0,
 		FailedCount:                 0,
@@ -621,6 +624,16 @@ func (s *Service) outputFailureRate(results []ValidationResult, conclusion *Vali
 				s.FailedCount++
 			}
 		}
+	}
+	reputationsOutput := ""
+	for i := 10001; i < 10001+s.ExportReputations; i++ {
+		w, err := s.Accounting.GetWorker("localhost:" + strconv.Itoa(i))
+		if err == nil {
+			reputationsOutput += strconv.Itoa(w.Reputation) + " "
+		}
+	}
+	if reputationsOutput != "" {
+		log2.Export.Printf("%d %s", s.WorksCount, reputationsOutput)
 	}
 	log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%d] NODES_AVG[%f] LOSS_B[%d] LEFT_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d] AVG_REP[%f] VAR_REP[%f] Data[%d] REQ_ID[%d] LOCAL_WORKS[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, len(results), s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.StakeLeft, s.Accounting.GoodWorkersLoss, s.OnBridgeCount, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, conclusion.Data, vreq.RequestId, s.LocalWorksCount)
 }

@@ -36,6 +36,7 @@ var (
 	skipValidationOpt        = flag.Bool("skip", false, "help message for \"skip\" option")
 	initialReputationOpt     = flag.Int("inirep", 0, "help message for \"inirep\" option")
 	sabotagableReputationOpt = flag.Int("sabrep", 0, "help message for \"sabrep\" option")
+	exportReputationsOpt     = flag.Int("exportrep", 0, "help message for \"exportrep\" option")
 )
 
 func main() {
@@ -82,7 +83,7 @@ func main() {
 	}
 
 	//ブリッジ起動
-	peerBridge, err := bridge.New(config, false, *faultyFrationOpt, *credibilityOpt, *resetRateOpt, *watcherOpt, *blackListingOpt, *stepVotingOpt, *skipValidationOpt, *initialReputationOpt, *attackModeOpt, *sabotagableReputationOpt)
+	peerBridge, err := bridge.New(config, false, *faultyFrationOpt, *credibilityOpt, *resetRateOpt, *watcherOpt, *blackListingOpt, *stepVotingOpt, *skipValidationOpt, *initialReputationOpt, *attackModeOpt, *sabotagableReputationOpt, *exportReputationsOpt)
 	if err != nil {
 		fmt.Printf("FATAL %s [] Failed to initialize peer", time.Now())
 	}
