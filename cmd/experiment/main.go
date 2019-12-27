@@ -1,11 +1,11 @@
 package main
 
 import (
-	"bufio"
+	//"bufio"
 	"context"
 	"flag"
 	"fmt"
-	"os"
+	//"os"
 	"strconv"
 	"sync"
 	"time"
@@ -186,7 +186,7 @@ func main() {
 	}()
 
 	//コマンドをスキャン
-	scanner := bufio.NewScanner(os.Stdin)
+	/*scanner := bufio.NewScanner(os.Stdin)
 	stoped := false
 	go func() {
 		fmt.Printf("Antone > ")
@@ -203,7 +203,7 @@ func main() {
 				fmt.Printf("Antone > ")
 			}
 		}
-	}()
+	}()*/
 
 	select {
 	case <-errch:
