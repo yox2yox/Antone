@@ -12,15 +12,16 @@ import (
 )
 
 type Endpoint struct {
-	Datapool   *datapool.Service
-	Db         map[string]int32
-	Id         string
-	AttackMode int
-	BadMode    bool
-	Reputation int
+	Datapool     *datapool.Service
+	Db           map[string]int32
+	Id           string
+	AttackMode   int
+	BadMode      bool
+	Reputation   int
+	SabotageRate float64
 }
 
-func NewEndpoint(datapool *datapool.Service, badmode bool, attackMode int) *Endpoint {
+func NewEndpoint(datapool *datapool.Service, badmode bool, attackMode int, stabotageRate float64) *Endpoint {
 	return &Endpoint{
 		Datapool: datapool,
 		Db: map[string]int32{
@@ -93,7 +94,7 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 	if e.AttackMode == 4 {
 		// Attack 4 : Credibilityおよび不正ワーカ数を利用For Step Voting
 		if e.BadMode && validatableCode.CountUnstabotagable <= 0 {
-			stabotageRate := 1.0
+			stabotageRate := e.SabotageRate
 			if len(validatableCode.Badreputations) <= 1 {
 				cred := stolerance.CalcWorkerCred(validatableCode.FaultyFraction, int(validatableCode.Badreputations[0]))
 				log2.Debug.Printf("first bad node start calc satabotage %d %f", validatableCode.Badreputations[0], cred)

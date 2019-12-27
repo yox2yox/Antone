@@ -37,6 +37,7 @@ var (
 	initialReputationOpt     = flag.Int("inirep", 0, "help message for \"inirep\" option")
 	sabotagableReputationOpt = flag.Int("sabrep", 0, "help message for \"sabrep\" option")
 	exportReputationsOpt     = flag.Int("exportrep", 0, "help message for \"exportrep\" option")
+	sabotageRateOpt          = flag.Float64("sabotage", 1, "help message for \"sabotage\" option")
 )
 
 func main() {
@@ -83,7 +84,7 @@ func main() {
 	}
 
 	//ブリッジ起動
-	peerBridge, err := bridge.New(config, false, *faultyFrationOpt, *credibilityOpt, *resetRateOpt, *watcherOpt, *blackListingOpt, *stepVotingOpt, *skipValidationOpt, *initialReputationOpt, *attackModeOpt, *sabotagableReputationOpt, *exportReputationsOpt)
+	peerBridge, err := bridge.New(config, false, *faultyFrationOpt, *credibilityOpt, *resetRateOpt, *watcherOpt, *blackListingOpt, *stepVotingOpt, *skipValidationOpt, *initialReputationOpt, *attackModeOpt, *sabotagableReputationOpt, *exportReputationsOpt, *sabotageRateOpt)
 	if err != nil {
 		fmt.Printf("FATAL %s [] Failed to initialize peer", time.Now())
 	}
@@ -123,7 +124,7 @@ func main() {
 			badnum--
 		}
 		log2.Debug.Printf("Addr:%s Bridge:%s Id:%s BadMode:%v", workerConfig.Server.Addr, workerConfig.Bridge.Addr, workerConfig.Bridge.AccountId, badmode)
-		peer, err := worker.New(workerConfig, false, badmode, *attackModeOpt)
+		peer, err := worker.New(workerConfig, false, badmode, *attackModeOpt, *sabotageRateOpt)
 		if err != nil {
 			log2.Err.Printf("failed to initialize peer %#v", err)
 			return

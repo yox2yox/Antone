@@ -25,7 +25,7 @@ type Peer struct {
 	BadMode                     bool
 }
 
-func New(config *config.WorkerConfig, debug bool, badmode bool, attackMode int) (*Peer, error) {
+func New(config *config.WorkerConfig, debug bool, badmode bool, attackMode int, sabotageRate float64) (*Peer, error) {
 	peer := &Peer{}
 
 	{ //setup debug mode
@@ -53,7 +53,7 @@ func New(config *config.WorkerConfig, debug bool, badmode bool, attackMode int) 
 	}
 
 	{ //setup worker
-		pb.RegisterWorkerServer(peer.GrpcServer, worker.NewEndpoint(peer.DataPool, badmode, attackMode))
+		pb.RegisterWorkerServer(peer.GrpcServer, worker.NewEndpoint(peer.DataPool, badmode, attackMode, sabotageRate))
 	}
 
 	return peer, nil

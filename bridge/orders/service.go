@@ -71,6 +71,7 @@ type Service struct {
 	SetWatcher                  bool
 	SkipValidation              bool
 	SabotagableReputation       int
+	SabotageRate                float64
 	WorkerAttackMode            int
 	LatestData                  int32
 	LatestVersion               int64
@@ -78,7 +79,7 @@ type Service struct {
 	stopChan                    chan struct{}
 }
 
-func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool, skipValidation bool, workerAttackMode int, sabotagableReputation int, exportReputations int) *Service {
+func NewService(accounting *accounting.Service, datapool *datapool.Service, withoutConnectRemoteForTest bool, calcER bool, setWatcher bool, stepVoting bool, skipValidation bool, workerAttackMode int, sabotagableReputation int, exportReputations int, sabotageRate float64) *Service {
 	return &Service{
 		WaitGroupForValidation:      &sync.WaitGroup{},
 		CommitMutex:                 new(sync.Mutex),
@@ -108,6 +109,7 @@ func NewService(accounting *accounting.Service, datapool *datapool.Service, with
 		SkipValidation:              skipValidation,
 		WorkerAttackMode:            workerAttackMode,
 		SabotagableReputation:       sabotagableReputation,
+		SabotageRate:                sabotageRate,
 		stopChan:                    make(chan struct{}),
 	}
 }
@@ -230,7 +232,7 @@ func (s *Service) dequeueValidationRequest() *ValidationRequest {
 }
 
 func (s *Service) AddValidationRequest(requestID int, datapoolId string, needNum int, holderId string, vcode *pb.ValidatableCode, resultsMap map[int64]int32) {
-	fmt.Printf("DEBUG %s [] A ValidationRequest is added to orders.service\n", time.Now().String())
+	//fmt.Printf("DEBUG %s [] A ValidationRequest is added to orders.service\n", time.Now().String())
 	vreq := &ValidationRequest{DatapoolId: datapoolId, Neednum: needNum, HolderId: holderId, ValidatableCode: vcode, RequestId: requestID}
 	s.Lock()
 	s.RequestsBeforeValidation = append(s.RequestsBeforeValidation, vreq)
@@ -248,7 +250,7 @@ func (s *Service) AddValidationRequest(requestID int, datapoolId string, needNum
 		}
 	}
 	s.addRequestToTree(vreq)
-	fmt.Printf("DEBUG %s [] Waiting RequestsBeforeValidation count is %d\n", time.Now().String(), len(s.RequestsBeforeValidation))
+	//fmt.Printf("DEBUG %s [] Waiting RequestsBeforeValidation count is %d\n", time.Now().String(), len(s.RequestsBeforeValidation))
 }
 
 func (s *Service) getAncestorsFromTree(id int) []*ValidationRequest {
@@ -352,7 +354,7 @@ func (s *Service) commitConclustion(vreq *ValidationRequest, results []Validatio
 		s.Unlock()
 	}
 	//結果から評価値を登録
-	fmt.Printf("INFO %s [] END - Validations by remote workers", time.Now())
+	//fmt.Printf("INFO %s [] END - Validations by remote workers", time.Now())
 	s.commitReputation(vreq.HolderId, results, conclusion, validateByBridge)
 
 	//結果を送信
@@ -633,7 +635,7 @@ func (s *Service) outputFailureRate(results []ValidationResult, conclusion *Vali
 		}
 	}
 	if reputationsOutput != "" {
-		log2.Export.Printf("%d %s", s.WorksCount, reputationsOutput)
+		fmt.Printf("%d %s\n", s.WorksCount, reputationsOutput)
 	}
 	log2.TestER.Printf("Validation Complete WORKS[%d] SUC[%d] FAIL[%d] ERR[%d] REJ[%d] NODES[%d] NODES_AVG[%f] LOSS_B[%d] LEFT_B[%d] LOSS_G[%d] BRIDGE_WORKS[%d] AVG_REP[%f] VAR_REP[%f] Data[%d] REQ_ID[%d] LOCAL_WORKS[%d]", s.WorksCount, s.SuccessCount, s.FailedCount, s.ErrCount, s.RejectedCount, len(results), s.NodesAvg, s.Accounting.BadWorkersLoss, s.Accounting.StakeLeft, s.Accounting.GoodWorkersLoss, s.OnBridgeCount, s.Accounting.AverageReputation, s.Accounting.VarianceReputation, conclusion.Data, vreq.RequestId, s.LocalWorksCount)
 }
@@ -681,10 +683,10 @@ func (s *Service) Stop() {
 	acc := s.Accounting
 	data, _, _ := s.Datapool.FetcheDatapoolFromRemote("client30")
 	s.WaitGroupForValidation.Wait()
-	log2.Export.Printf("%d %f %f %f %d %t %t %t %t %d %d %d %f %f %f %f %d %d %d %d %d", acc.GetWorkersCount(),
+	log2.Export.Printf("%d %f %f %f %d %t %t %t %t %d %d %d %f %f %f %f %d %d %d %d %d %f %d", acc.GetWorkersCount(),
 		acc.FaultyFraction, acc.CredibilityThreshould, acc.ReputationResetRate, s.Accounting.InitialReputation,
 		s.SetWatcher, s.StepVoting, s.Accounting.BlackListing, s.SkipValidation, s.WorkerAttackMode, s.WorksCount,
 		s.FailedCount, float64(s.FailedCount)/float64(s.WorksCount), s.NodesAvg, s.Accounting.AverageReputation,
 		s.Accounting.VarianceReputation, s.Accounting.BadWorkersLoss, s.Accounting.GoodWorkersLoss, data,
-		s.CrossFailCount, s.LocalWorksCount)
+		s.CrossFailCount, s.LocalWorksCount, s.SabotageRate, s.SabotagableReputation)
 }
