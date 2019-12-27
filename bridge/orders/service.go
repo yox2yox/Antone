@@ -202,13 +202,16 @@ func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.Valida
 	workerClient := workerpb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	log2.Debug.Printf("start to count bad workers reputation")
 	unsabotagable := s.Accounting.CountBadWorkersReputationLT(s.SabotagableReputation)
 	vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add, Reputation: int32(worker.Reputation), Badreputations: badreputations, Threshould: float32(s.Accounting.CredibilityThreshould), Resetrate: float32(s.Accounting.ReputationResetRate), FirstNodeIsfault: firstNodeIsFault, FaultyFraction: s.Accounting.FaultyFraction, CountUnstabotagable: int32(unsabotagable)}
+	log2.Debug.Printf("start to order validation on remote")
 	validationResult, err := workerClient.OrderValidation(ctx, vCodeWorker)
 	if err != nil {
 		log2.Err.Printf("failed to validation on remote %#v", err)
 		return &ValidationResult{WorkerId: worker.Id, Data: 0, IsRejected: false, IsError: true}
 	} else {
+		log2.Debug.Printf("success to order validation on remote")
 		return &ValidationResult{WorkerId: worker.Id, Data: validationResult.Pool, IsRejected: false, IsError: false}
 	}
 }
@@ -649,6 +652,7 @@ func (s *Service) Run() {
 		default:
 			if len(s.RequestsBeforeValidation) > 0 && (s.NowValidating == nil || s.SkipValidation) {
 				vreq := s.dequeueValidationRequest()
+				fmt.Printf("Start to validate Request[%d]\n", vreq.RequestId)
 				s.NowValidating = vreq
 				if vreq != nil {
 					log2.Debug.Printf("Got order to validate")
@@ -667,6 +671,7 @@ func (s *Service) Run() {
 						} else if results != nil {
 							s.commitConclusionToTree(vreq.RequestId, results, conclusion)
 						}
+						fmt.Printf("Finish to validate Request[%d]\n", vreq.RequestId)
 						s.WaitGroupForValidation.Done()
 						s.Lock()
 						s.NowValidating = nil
