@@ -56,7 +56,9 @@ func (e *Endpoint) RequestValidatableCode(ctx context.Context, vCodeRequest *pb.
 	/*for vCodeRequest.WaitForValidation && e.Orders.GetWaitingTreeCount() > 0 {
 		log2.Debug.Printf("stacking %d", e.Orders.GetWaitingTreeCount())
 	}*/
-	e.Orders.WaitGroupForValidation.Wait()
+	if vCodeRequest.WaitForValidation {
+		e.Orders.WaitGroupForValidation.Wait()
+	}
 	return vcode, nil
 
 }
