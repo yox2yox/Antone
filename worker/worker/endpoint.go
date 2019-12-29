@@ -21,15 +21,16 @@ type Endpoint struct {
 	SabotageRate float64
 }
 
-func NewEndpoint(datapool *datapool.Service, badmode bool, attackMode int, stabotageRate float64) *Endpoint {
+func NewEndpoint(datapool *datapool.Service, badmode bool, attackMode int, sabotageRate float64) *Endpoint {
 	return &Endpoint{
 		Datapool: datapool,
 		Db: map[string]int32{
 			"client0": 0,
 		},
-		BadMode:    badmode,
-		AttackMode: attackMode,
-		Reputation: 0,
+		BadMode:      badmode,
+		AttackMode:   attackMode,
+		Reputation:   0,
+		SabotageRate: sabotageRate,
 	}
 }
 
@@ -93,13 +94,15 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 
 	if e.AttackMode == 4 {
 		// Attack 4 : Credibilityおよび不正ワーカ数を利用For Step Voting
+		log2.Debug.Printf("Count Unsabotagable is %d", validatableCode.CountUnstabotagable)
 		if e.BadMode && validatableCode.CountUnstabotagable <= 0 {
-			stabotageRate := e.SabotageRate
 			if len(validatableCode.Badreputations) <= 1 {
 				cred := stolerance.CalcWorkerCred(validatableCode.FaultyFraction, int(validatableCode.Badreputations[0]))
 				log2.Debug.Printf("first bad node start calc satabotage %d %f", validatableCode.Badreputations[0], cred)
 				rand.Seed(time.Now().UnixNano())
-				if rand.Float64() <= stabotageRate {
+				randNum := rand.Float64()
+				log2.Debug.Printf("Random number is %f,and sabotage rate is %f", randNum, e.SabotageRate)
+				if randNum <= e.SabotageRate {
 					log2.Debug.Printf("first bad node try to sabotage")
 					return &pb.ValidationResult{Pool: -1, Reject: false}, nil
 				}
