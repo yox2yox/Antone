@@ -397,7 +397,17 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 				s.GoodWorkersLoss += sub
 			}
 			s.Workers[workerId].GoodWorkCount = 0
+		} else {
+			balanceBefore := s.Workers[workerId].Balance
+			balanceAfter := 0
+			sub := balanceBefore - balanceAfter
+			if s.Workers[workerId].IsBad {
+				s.BadWorkersLoss += sub
+			} else {
+				s.GoodWorkersLoss += sub
+			}
 		}
+
 		rep = s.Workers[workerId].Reputation
 		s.Unlock()
 		s.calcAverageCredibility()
