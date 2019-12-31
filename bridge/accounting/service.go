@@ -348,6 +348,9 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 		s.Workers[workerId].Balance += 1
 		if s.Workers[workerId].IsBad {
 			s.StakeLeft += 1
+			s.BadWorkersLoss -= 1
+		} else {
+			s.GoodWorkersLoss -= 1
 		}
 		s.Workers[workerId].GoodWorkCount += 1
 
