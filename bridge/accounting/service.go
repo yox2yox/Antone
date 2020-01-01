@@ -344,37 +344,17 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 		//バリデーション成功時の処理
 
 		s.Lock()
-		s.Workers[workerId].Reputation += 1
-		s.Workers[workerId].Balance += 1
+		s.Workers[workerId].Reputation++
+		s.Workers[workerId].Balance++
 		if s.Workers[workerId].IsBad {
-			s.StakeLeft += 1
-			s.BadWorkersLoss -= 1
+			s.StakeLeft++
+			s.BadWorkersLoss--
 		} else {
-			s.GoodWorkersLoss -= 1
+			s.GoodWorkersLoss--
 		}
-		s.Workers[workerId].GoodWorkCount += 1
-
-		stakeRate := 1.0 //float64(worker.Balance) / float64(s.MaxStake)
-		if stakeRate > 1 {
-			stakeRate = 1.0
-		}
-		rep = s.Workers[workerId].Reputation
-		n, err := crand.Int(crand.Reader, big.NewInt(1000000))
-		if err != nil {
-			log2.Err.Printf("failed to get random number")
-		} else {
-			resetRate := s.ReputationResetRate
-			if n.Cmp(big.NewInt(int64((1-resetRate)*stakeRate*1000000))) == 1 {
-				//reset, err := crand.Int(crand.Reader, big.NewInt(100))
-				if err != nil {
-					log2.Err.Printf("failed to get random number")
-					s.Workers[workerId].Reputation = 0
-				} else {
-					s.Workers[workerId].Reputation = 0
-					//s.Workers[workerId].Reputation = int(float64(s.Workers[workerId].Reputation) * (float64(reset.Int64()) / 100))
-				}
-				rep = s.Workers[workerId].Reputation
-			}
+		s.Workers[workerId].GoodWorkCount++
+		if s.canResetReputaion() {
+			s.Workers[workerId].Reputation = 0
 		}
 		s.Unlock()
 		s.calcAverageCredibility()
@@ -384,12 +364,7 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 		if s.BlackListing {
 			s.Workers[workerId].Reputation = 0
 			balanceBefore := s.Workers[workerId].Balance
-			if validateByBridge {
-				s.Workers[workerId].Balance = 0
-			} else {
-				s.Workers[workerId].Balance = 0
-				log2.Err.Printf("Faild to validate On Bridge")
-			}
+			s.Workers[workerId].Balance = 0
 			balanceAfter := s.Workers[workerId].Balance
 			sub := balanceBefore - balanceAfter
 			if s.Workers[workerId].IsBad {
@@ -408,6 +383,9 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 				s.BadWorkersLoss += sub
 			} else {
 				s.GoodWorkersLoss += sub
+			}
+			if s.canResetReputaion() {
+				s.Workers[workerId].Reputation = 0
 			}
 		}
 
@@ -446,4 +424,18 @@ func (s *Service) calcAverageCredibility() float64 {
 	s.VarianceReputation = math.Sqrt(sumVar / float64(len(s.Workers)))
 	s.Unlock()
 	return s.AverageCredibility
+}
+
+func (s *Service) canResetReputaion() bool {
+	n, err := crand.Int(crand.Reader, big.NewInt(1000000))
+	if err != nil {
+		log2.Err.Printf("failed to get random number")
+		return false
+	} else {
+		resetRate := s.ReputationResetRate
+		if n.Cmp(big.NewInt(int64((1-resetRate)*1000000))) == 1 {
+			return true
+		}
+	}
+	return false
 }
