@@ -133,7 +133,11 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 		if e.BadMode {
 			log2.Debug.Printf("BadReputations is %#v", validatableCode.Badreputations)
 			if len(validatableCode.Badreputations) <= 1 {
-				if validatableCode.Badreputations[0] >= 246 {
+				rand.Seed(time.Now().UnixNano())
+				randNum := rand.Float64()
+				log2.Debug.Printf("Random number is %f,and sabotage rate is %f", randNum, e.SabotageRate)
+				if randNum <= e.SabotageRate {
+					log2.Debug.Printf("first bad node try to sabotage")
 					return &pb.ValidationResult{Pool: -1, Reject: false}, nil
 				}
 			} else if validatableCode.FirstNodeIsfault {
