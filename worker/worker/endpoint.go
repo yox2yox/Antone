@@ -131,6 +131,7 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 
 	if e.AttackMode == 5 {
 		if e.BadMode {
+			log2.Debug.Printf("BadReputations is %#v", validatableCode.Badreputations)
 			if len(validatableCode.Badreputations) <= 1 {
 				if validatableCode.Badreputations[0] >= 246 {
 					return &pb.ValidationResult{Pool: -1, Reject: false}, nil
