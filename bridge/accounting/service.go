@@ -394,6 +394,8 @@ func (s *Service) UpdateReputation(workerId string, confirmed bool, validateByBr
 			if s.canResetReputaion() {
 				s.Workers[workerId].Reputation = 0
 			}
+			s.Workers[workerId].Reputation = 0
+			s.Workers[workerId].GoodWorkCount = 0
 		}
 
 		rep = s.Workers[workerId].Reputation
