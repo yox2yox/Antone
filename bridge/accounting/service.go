@@ -196,14 +196,21 @@ func (s *Service) SelectValidationWorkersWithThreshold(needAtLeast int, credG []
 			gotWorkers = append(gotWorkers, workers...)
 			return gotWorkers, nil
 		}
+
 		workers, err := s.SelectValidationWorkers(1, exceptWorkersID)
 		if err != nil || len(workers) < 1 {
 			return nil, err
 		}
-		credibility := stolerance.CalcWorkerCred(s.FaultyFraction, workers[0].Reputation)
+		var credibility float64
+		if s.StepVoting {
+			credibility = stolerance.CalcSecondaryWorkerCred(s.FaultyFraction, workers[0].Reputation)
+		} else {
+			credibility = stolerance.CalcWorkerCred(s.FaultyFraction, workers[0].Reputation)
+		}
 		gotWorkers = append(gotWorkers, workers[0])
 		credG[targetIndex] = append(credG[targetIndex], credibility)
 		exceptWorkersID = append(exceptWorkersID, workers[0].Id)
+
 	}
 }
 
