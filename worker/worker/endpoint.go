@@ -129,6 +129,18 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 		}
 	}
 
+	if e.AttackMode == 5 {
+		if e.BadMode {
+			if len(validatableCode.Badreputations) <= 1 {
+				if validatableCode.Badreputations[0] >= 246 {
+					return &pb.ValidationResult{Pool: -1, Reject: false}, nil
+				}
+			} else if validatableCode.FirstNodeIsfault {
+				return &pb.ValidationResult{Pool: -1, Reject: false}, nil
+			}
+		}
+	}
+
 	pool := validatableCode.Data + validatableCode.Add
 	e.Reputation++
 	return &pb.ValidationResult{Pool: pool, Reject: false}, nil
