@@ -193,7 +193,7 @@ func (s *Service) GetValidatableCode(ctx context.Context, datapoolId string, add
 	}
 }
 
-func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.ValidatableCode, badreputations []int32, firstNodeIsFault bool) *ValidationResult {
+func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.ValidatableCode, badreputations []int32, firstNodeIsFault bool, goodValidatorDetected bool) *ValidationResult {
 	conn, err := grpc.Dial(worker.Addr, grpc.WithInsecure())
 	if err != nil {
 		log2.Err.Printf("failed to connect to remote %#v", err)
@@ -204,7 +204,7 @@ func (s *Service) validateCodeRemote(worker *accounting.Worker, vCode *pb.Valida
 	defer cancel()
 	log2.Debug.Printf("start to count bad workers reputation")
 	unsabotagable := s.Accounting.CountBadWorkersReputationLT(s.SabotagableReputation)
-	vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add, Reputation: int32(worker.Reputation), Badreputations: badreputations, Threshould: float32(s.Accounting.CredibilityThreshould), Resetrate: float32(s.Accounting.ReputationResetRate), FirstNodeIsfault: firstNodeIsFault, FaultyFraction: s.Accounting.FaultyFraction, CountUnstabotagable: int32(unsabotagable)}
+	vCodeWorker := &workerpb.ValidatableCode{Data: vCode.Data, Add: vCode.Add, Reputation: int32(worker.Reputation), Badreputations: badreputations, Threshould: float32(s.Accounting.CredibilityThreshould), Resetrate: float32(s.Accounting.ReputationResetRate), FirstNodeIsfault: firstNodeIsFault, FaultyFraction: s.Accounting.FaultyFraction, CountUnstabotagable: int32(unsabotagable), GoodValidatorDetected: goodValidatorDetected}
 	log2.Debug.Printf("start to order validation on remote")
 	validationResult, err := workerClient.OrderValidation(ctx, vCodeWorker)
 	if err != nil {
@@ -492,6 +492,7 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 	}
 	err = nil
 	badreputations := []int32{}
+	goodValidator := false
 	for {
 		if len(nextpicks) > 0 {
 
@@ -502,6 +503,9 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 					if worker.IsBad {
 						log2.Debug.Printf("bad woker detected")
 						badreputations = append(badreputations, int32(worker.GoodWorkCount))
+					} else {
+						log2.Debug.Printf("good woker detected")
+						goodValidator = true
 					}
 				}
 				unavailable = append(unavailable, pickedIDs...)
@@ -512,7 +516,7 @@ func (s *Service) ValidateCode(ctx context.Context, picknum int, holderId string
 					if s.WithoutConnectRemoteForTest == false {
 						log2.Debug.Printf("Send Validation Request to %s firstNodeIsFault[%#v]", worker.Addr, firstNodeIsFault)
 						go func(target *accounting.Worker) {
-							validationResult := s.validateCodeRemote(target, vCode, badreputations, firstNodeIsFault)
+							validationResult := s.validateCodeRemote(target, vCode, badreputations, firstNodeIsFault, goodValidator)
 							resultChan <- validationResult
 						}(worker)
 					} else {

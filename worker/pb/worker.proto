@@ -25,7 +25,8 @@ message ValidatableCode {
   double faultyFraction = 7;
   int64 version = 8;
   int32 countUnstabotagable = 9;
-  repeated int32 badreputations = 10; //不正ノードの予想評価値
+  bool goodValidatorDetected = 10;
+  repeated int32 badreputations = 11; //不正ノードの予想評価値
 }
 
 message ValidationResult {

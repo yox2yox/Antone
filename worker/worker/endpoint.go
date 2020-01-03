@@ -140,7 +140,7 @@ func (e *Endpoint) OrderValidation(ctx context.Context, validatableCode *pb.Vali
 					log2.Debug.Printf("first bad node try to sabotage")
 					return &pb.ValidationResult{Pool: -1, Reject: false}, nil
 				}
-			} else if validatableCode.FirstNodeIsfault {
+			} else if validatableCode.FirstNodeIsfault && !validatableCode.GoodValidatorDetected {
 				return &pb.ValidationResult{Pool: -1, Reject: false}, nil
 			}
 		}
