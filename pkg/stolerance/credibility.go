@@ -18,7 +18,7 @@ func CalcSecondaryWorkerCred(f float64, reputation int) float64 {
 	if reputation > 0 {
 		return 1.0 - (f/(1-f))*((float64(reputation)+1)/(float64(reputation)*e))
 	} else {
-		return (1.0 - f) * (1.0 - f)
+		return 1.0 - (f/(1-f))*(2/e)
 	}
 }
 
