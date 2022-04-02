@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package pb;
+
+service Datapool {
+
+    rpc CreateDatapool(CreateRequest) returns (DatapoolInfo) {}
+    rpc AddHolders(AddHolderRequest) returns (AddHolderResult) {}
+
+}
+
+message CreateRequest {
+    string userid = 1;
+    int32 holdersnum = 2;
+}
+
+message DatapoolInfo{
+    string datapoolid = 1;
+    string ownerid = 2;
+}
+
+message AddHolderRequest{
+    string datapoolid = 1;
+    int32 holdersnum = 2;
+}
+
+message AddHolderResult{}

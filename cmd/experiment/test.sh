@@ -1,0 +1,1 @@
+go run main.go -a localhost -port 10000 -num 200 -bad 80 -a localhost -req 1000 -validators 2 -reset 0 -fault 0.4 -cred 0.99 -attack 1 -skip

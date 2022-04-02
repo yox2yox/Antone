@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package pb;
+
+service Datapool {
+    rpc GetDatapool(DatapoolId) returns (DatapoolContent) {}
+    rpc UpdateDatapool(DatapoolContent) returns (UpdateResult) {}
+    rpc CreateDatapool(DatapoolContent) returns (CreateResult) {}
+    rpc DeleteDatapool(DatapoolId) returns (DeleteResult) {}
+}
+
+message DatapoolId {
+    string id = 1;
+}
+
+message DatapoolContent {
+    string id = 1;
+    int32 data = 2;
+    int64 version = 3;
+}
+
+message UpdateResult {}
+
+message CreateResult {}
+
+message DeleteResult {}

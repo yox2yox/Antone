@@ -1,19 +1,44 @@
 syntax = "proto3";
 
-package accounting;
+package pb;
 
 service Accounting {
 
-  rpc SignupWorkerAccount(SignupWorkerRequest) returns (WorkerAccount) {}
+  rpc SignupWorker(SignupWorkerRequest) returns (WorkerAccount) {}
+  rpc SignupClient(SignupClientRequest) returns (ClientAccount) {}
+  rpc GetWorkerInfo(GetWorkerRequest) returns(WorkerAccount) {}
+  rpc GetClientInfo(GetClientRequest) returns(ClientAccount) {}
 
 }
 
 
-message SignupWorkeRequest {
-  string userid = 1;
-  string ipAddr = 2;
+message SignupWorkerRequest {
+  string id = 1;
+  string addr = 2;
+  bool isBad = 3;
+}
+
+message GetWorkerRequest {
+  string id = 1;
 }
 
 message WorkerAccount {
-  string userid = 1;
+  string id = 1;
+  int32  reputation = 2;
+  int32 balance = 3;
+  repeated string holdings = 4;
+}
+
+message SignupClientRequest {
+  string id = 1;
+  string addr = 2;
+}
+
+message GetClientRequest {
+  string id = 1;
+}
+
+message ClientAccount {
+  string id = 1;
+  int32 balance = 3;
 }

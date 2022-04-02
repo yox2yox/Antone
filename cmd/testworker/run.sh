@@ -1,0 +1,1 @@
+go run main.go -a localhost -port 10001 -num 100 -bad 40 -bridge localhost:10000

@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package pb;
+
+service Orders {
+
+  rpc RequestValidatableCode(ValidatableCodeRequest) returns (ValidatableCode) {}
+  rpc CommitValidation(ValidationResult) returns (CommitResult) {}
+
+}
+
+
+message ValidatableCodeRequest {
+  string datapoolid = 1;
+  int32 add = 2;
+  bool waitForValidation = 3;
+}
+
+message ValidatableCode {
+  int32 data = 1; //データベースの元データ
+  int32 add = 2; //加算する値
+  int64 version = 3;
+}
+
+message ValidationResult{
+  string added_data = 1; //加算後の値
+}
+
+message CommitResult{
+  
+}

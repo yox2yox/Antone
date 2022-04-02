@@ -1,27 +1,35 @@
 syntax = "proto3";
 
-package worker;
+package pb;
 
 service Worker {
 
-  rpc OrderWork(Order) returns (OrderResult) {}
-  rpc OrderValidation(ValidatableCode) returns () {}
+  rpc OrderValidation(ValidatableCode) returns (ValidationResult) {}
+  rpc GetValidatableCode(ValidatableCodeRequest) returns (ValidatableCode) {}
 
 }
 
-
-message Order {
+message ValidatableCodeRequest {
   string bridgeid = 1;
-  int32 a = 2;
-  int32 b = 3;
-}
-
-message OrderResult {
-  string workerid = 1;
-  int32 result = 2;
+  string datapoolid = 2;
+  int32 add = 3;
 }
 
 message ValidatableCode {
-  int32 data = 1;
-  int32 arg = 2;
+  int32 data = 1; //データベースの元データ
+  int32 add = 2; //加算する値
+  int32 reputation = 3;//検証用にワーカーの評価値を送信
+  float threshould = 4;
+  float resetrate = 5;
+  bool firstNodeIsfault = 6;
+  double faultyFraction = 7;
+  int64 version = 8;
+  int32 countUnstabotagable = 9;
+  bool goodValidatorDetected = 10;
+  repeated int32 badreputations = 11; //不正ノードの予想評価値
+}
+
+message ValidationResult {
+  int32 pool = 1; //データベースの最新データ
+  bool reject = 2; //検証失敗
 }
